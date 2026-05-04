@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    activity_tv_main.xml
+    Layout para TvMainActivity — pantalla completa WebView optimizada para TV:
+    - Sin barras de sistema
+    - ProgressBar de carga centrada
+    - Overlay de error con botón Reintentar focusable por D-Pad
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/tvRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    android:keepScreenOn="true"
+    tools:context=".tv.TvMainActivity">
+
+    <!-- ── WebView principal ────────────────────────────────────────────── -->
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:nextFocusDown="@id/webView"
+        android:nextFocusUp="@id/webView"
+        android:nextFocusLeft="@id/webView"
+        android:nextFocusRight="@id/webView"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- ── Indicador de carga ─────────────────────────────────────────── -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
+        android:indeterminate="true"
+        android:indeterminateTint="@color/luki_cyan"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- ── Overlay de error (inicialmente oculto) ────────────────────── -->
+    <LinearLayout
+        android:id="@+id/errorLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="48dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvErrorMsg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/error_no_internet"
+            android:textColor="@color/luki_text_primary"
+            android:textSize="22sp"
+            android:gravity="center"
+            android:layout_marginBottom="32dp" />
+
+        <!-- Botón focusable vía D-Pad -->
+        <Button
+            android:id="@+id/btnRetry"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="200dp"
+            android:text="@string/retry"
+            android:backgroundTint="@color/luki_cyan"
+            android:textColor="@color/luki_dark"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:focusable="true"
+            android:nextFocusDown="@id/btnRetry"
+            android:nextFocusUp="@id/btnRetry"
+            android:nextFocusLeft="@id/btnRetry"
+            android:nextFocusRight="@id/btnRetry" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    network_security_config.xml — Luki Play Android
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    • HTTPS es el protocolo por defecto para todos los dominios.
+    • Cleartext (HTTP) solo se permite para dominios explícitamente
+      listados (servidor de desarrollo y streams de prueba).
+    • BASE_URL de producción (play.luki.tv) → solo HTTPS, sin excepción.
+-->
+<network-security-config>
+
+    <!-- Política global: HTTPS obligatorio (Android 9+ ya lo impone; esto lo hace
+         explícito también para minSdk 21-27) -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Servidor de desarrollo interno (HTTP cleartext permitido) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">98.80.97.51</domain>
+    </domain-config>
+
+    <!-- Streams de prueba Mux (HTTP cleartext permitido por posibles redirecciones) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">test-streams.mux.dev</domain>
+    </domain-config>
+
+    <!-- Producción: play.luki.tv — solo HTTPS (ya cubierto por base-config;
+         se declara explícitamente para documentar el BASE_URL del proyecto) -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">play.luki.tv</domain>
+        <domain includeSubdomains="true">luki.tv</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+
+</network-security-config>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    splash_logo.xml — Logotipo vectorial Luki Play
+    Círculo cyan (#00D4EA) con triángulo "play" blanco centrado.
+    200 × 200 dp  |  Safe zone: 160 × 160 dp
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Sombra suave exterior (círculo ligeramente más grande en negro semi-transparente) -->
+    <path
+        android:fillColor="#22000000"
+        android:pathData="M100,22 a78,78 0 1,0 0,156 a78,78 0 1,0 0,-156 z" />
+
+    <!-- Círculo principal cyan -->
+    <path
+        android:fillColor="#00D4EA"
+        android:pathData="M100,24 a76,76 0 1,0 0,152 a76,76 0 1,0 0,-152 z" />
+
+    <!-- Triángulo "play" blanco centrado en la zona segura -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M82,70 L140,100 L82,130 Z" />
+
+</vector>

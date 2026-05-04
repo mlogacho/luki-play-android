@@ -1,0 +1,28 @@
+## Luki Play Android — .gitignore
+
+# ── Gradle ──────────────────────────────────────────────────────────────────
+.gradle/
+build/
+**/build/
+
+# ── Keystore y credenciales ─────────────────────────────────────────────────
+keystore/
+*.keystore
+*.jks
+local.properties
+
+# ── Android Studio ───────────────────────────────────────────────────────────
+*.iml
+.idea/
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ── APKs / AABs generados ───────────────────────────────────────────────────
+*.apk
+*.aab
+*.ap_
+
+# ── Logs ────────────────────────────────────────────────────────────────────
+*.log

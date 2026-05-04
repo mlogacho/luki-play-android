@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    tv_banner.xml — Banner para el launcher de Android TV / Google TV
+    Tamaño requerido por Google Play: 320 × 180 dp
+    Fondo: luki_navy  |  Logotipo: luki_cyan sobre texto blanco
+
+    TV App Quality: android:banner en <application> es OBLIGATORIO
+    para aparecer correctamente en el launcher de Android TV.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Fondo degradado azul marino → azul oscuro (320 × 180 dp) -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#001E41"
+                android:endColor="#000D1A"
+                android:angle="135"
+                android:type="linear" />
+        </shape>
+    </item>
+
+    <!-- Línea de acento cyan en la parte inferior -->
+    <item android:gravity="bottom">
+        <shape android:shape="rectangle">
+            <solid android:color="#00D4EA" />
+            <size android:height="3dp" />
+        </shape>
+    </item>
+
+    <!-- Círculo de marca (simula el ícono de la app centrado a la izquierda) -->
+    <item
+        android:width="72dp"
+        android:height="72dp"
+        android:gravity="center_vertical|start"
+        android:left="32dp">
+        <shape android:shape="oval">
+            <solid android:color="#00D4EA" />
+        </shape>
+    </item>
+
+    <!-- "L" play-shape interior del círculo -->
+    <item
+        android:width="36dp"
+        android:height="36dp"
+        android:gravity="center_vertical|start"
+        android:left="50dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#001E41" />
+            <corners android:radius="2dp" />
+        </shape>
+    </item>
+
+</layer-list>

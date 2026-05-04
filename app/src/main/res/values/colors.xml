@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ── Brand LUKI ────────────────────────────────────────────────────── -->
+    <color name="luki_navy">#001E41</color>
+    <color name="luki_cyan">#00D4EA</color>
+    <color name="luki_dark">#0A0A0F</color>
+    <color name="luki_focus">#FFD700</color>
+    <color name="luki_text_primary">#FFFFFF</color>
+    <color name="luki_surface">#1A1A24</color>
+
+    <!-- ── Status / Semáforo ─────────────────────────────────────────────── -->
+    <color name="luki_error">#FF4C4C</color>
+    <color name="luki_warning">#FFA500</color>
+    <color name="luki_success">#00C853</color>
+</resources>

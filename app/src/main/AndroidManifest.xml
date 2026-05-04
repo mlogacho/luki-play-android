@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    AndroidManifest.xml — Luki Play Android
+    ─────────────────────────────────────────
+    applicationId : com.luki.play
+    minSdk        : 21  |  targetSdk : 34
+    BASE_URL      : http://98.80.97.51/home  (debug)
+                    https://play.luki.tv     (release)
+
+    Arquitectura de Activities:
+      SplashActivity  →  RouterActivity  →  TvMainActivity   (Android TV)
+                                        →  MobileMainActivity (móvil/tablet)
+      PlayerActivity  ←  invocada desde bridge JS
+
+    TV App Quality Checklist:
+      ✅ LEANBACK_LAUNCHER intent-filter (SplashActivity)
+      ✅ android.hardware.touchscreen  required="false"
+      ✅ android.software.leanback     required="false"
+      ✅ android:banner definido (tv_banner.xml)
+      ✅ android:roundIcon definido (mipmap-anydpi-v26)
+      ✅ No touchscreen / telephony / GPS required
+      ✅ FOREGROUND_SERVICE_MEDIA_PLAYBACK declarado
+      ✅ hardwareAccelerated="true" a nivel de application
+      ✅ networkSecurityConfig aplicado
+      ✅ android:name=".LukiApplication" declarado
+-->
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ════════════════════════════════════════════════════════
+         PERMISOS
+         ════════════════════════════════════════════════════════ -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- ════════════════════════════════════════════════════════
+         HARDWARE FEATURES — TV APP QUALITY CHECKLIST
+         Todas required="false" → elegible en Android TV / Google TV
+         sin pantalla táctil, cámara, GPS ni telefonía.
+         ════════════════════════════════════════════════════════ -->
+
+    <!-- ✅ TV Quality OBLIGATORIO: touchscreen NOT required -->
+    <uses-feature android:name="android.hardware.touchscreen"                    android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen.multitouch"         android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen.multitouch.distinct" android:required="false" />
+
+    <!-- Leanback soportado pero no obligatorio (permite instalar en móvil también) -->
+    <uses-feature android:name="android.software.leanback"  android:required="false" />
+
+    <!-- Sensores y hardware opcionales -->
+    <uses-feature android:name="android.hardware.camera"           android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone"       android:required="false" />
+    <uses-feature android:name="android.hardware.location"         android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps"     android:required="false" />
+    <uses-feature android:name="android.hardware.telephony"        android:required="false" />
+
+    <!-- ════════════════════════════════════════════════════════
+         APLICACIÓN
+         ════════════════════════════════════════════════════════ -->
+    <application
+        android:name=".LukiApplication"
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:banner="@drawable/tv_banner"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.LukiPlay.Splash"
+        android:networkSecurityConfig="@xml/network_security_config"
+        tools:targetApi="34">
+
+        <!-- ──────────────────────────────────────────────────────
+             SplashActivity — Punto de entrada único
+             ──────────────────────────────────────────────────────
+             Muestra el splash y arranca RouterActivity.
+             noHistory=true: no queda en el back-stack.
+        -->
+        <activity
+            android:name=".ui.SplashActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.LukiPlay.Splash"
+            android:noHistory="true">
+
+            <!-- Lanzador estándar (móvil / tablet) -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- ✅ TV Quality OBLIGATORIO: LEANBACK_LAUNCHER -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ──────────────────────────────────────────────────────
+             RouterActivity — Detecta TV vs móvil y redirige
+             ──────────────────────────────────────────────────────
+             No tiene layout propio; es invisible para el usuario.
+        -->
+        <activity
+            android:name=".ui.RouterActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.LukiPlay.Splash"
+            android:noHistory="true" />
+
+        <!-- ──────────────────────────────────────────────────────
+             TvMainActivity — WebView para Android TV / Google TV
+             ──────────────────────────────────────────────────────
+             Inyecta D-Pad JS helper; modo fullscreen/leanback.
+        -->
+        <activity
+            android:name=".tv.TvMainActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:theme="@style/Theme.LukiPlay"
+            android:hardwareAccelerated="true" />
+
+        <!-- ──────────────────────────────────────────────────────
+             MobileMainActivity — WebView para móvil / tablet
+             ──────────────────────────────────────────────────────
+             Gestión de doble-back, toast de salida.
+        -->
+        <activity
+            android:name=".mobile.MobileMainActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:theme="@style/Theme.LukiPlay"
+            android:windowSoftInputMode="adjustResize"
+            android:hardwareAccelerated="true" />
+
+        <!-- ──────────────────────────────────────────────────────
+             MainActivity — Actividad legacy / fallback WebView
+             ──────────────────────────────────────────────────────
+             Mantenida para compatibilidad con referencias existentes.
+        -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:theme="@style/Theme.LukiPlay"
+            android:windowSoftInputMode="adjustResize"
+            android:hardwareAccelerated="true" />
+
+        <!-- ──────────────────────────────────────────────────────
+             PlayerActivity — ExoPlayer / Media3 HLS fullscreen
+             ──────────────────────────────────────────────────────
+             launchMode=singleTop evita doble instancia al rotar.
+             keepScreenOn gestionado por el tema Player.
+        -->
+        <activity
+            android:name=".player.PlayerActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:theme="@style/Theme.LukiPlay.Player"
+            android:launchMode="singleTop"
+            android:hardwareAccelerated="true" />
+
+    </application>
+
+</manifest>

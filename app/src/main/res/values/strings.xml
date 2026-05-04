@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Luki Play</string>
+
+    <!-- ── Mensajes de error generales ───────────────────────────────────── -->
+    <string name="error_no_internet">No hay conexión a internet. Verifica tu red.</string>
+    <string name="error_player">Ocurrió un error al reproducir el contenido.</string>
+
+    <!-- ── Acciones ───────────────────────────────────────────────────────── -->
+    <string name="retry">Reintentar</string>
+    <string name="loading">Cargando Luki Play&#8230;</string>
+    <string name="exit_app">Presiona ATRÁS nuevamente para salir.</string>
+
+    <!-- ── Player ─────────────────────────────────────────────────────────── -->
+    <string name="player_retry">Reintentar reproducción</string>
+    <string name="player_error_no_url">URL de stream no válida.</string>
+    <string name="player_error_generic">Error al reproducir. Inténtalo de nuevo.</string>
+
+    <!-- ── Accesibilidad (Content Descriptions) ─────────────────────────── -->
+    <string name="cd_loading">Indicador de carga</string>
+    <string name="cd_logo">Logo de Luki Play</string>
+</resources>

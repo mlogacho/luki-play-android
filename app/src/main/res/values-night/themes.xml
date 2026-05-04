@@ -1,0 +1,17 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ══════════════════════════════════════════════════════
+         TEMA NOCTURNO — mismo que el día (app es nativa dark)
+         DayNight hereda automáticamente; redeclaramos solo para
+         asegurar que windowBackground sea siempre luki_dark.
+         ══════════════════════════════════════════════════════ -->
+    <style name="Base.Theme.LukiPlay" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/luki_navy</item>
+        <item name="colorPrimaryDark">@color/luki_dark</item>
+        <item name="colorAccent">@color/luki_cyan</item>
+        <item name="android:windowBackground">@color/luki_dark</item>
+        <item name="android:textColorPrimary">@color/luki_text_primary</item>
+        <item name="android:textColorSecondary">#B3FFFFFF</item>
+    </style>
+
+</resources>
