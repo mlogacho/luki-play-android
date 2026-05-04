@@ -1,17 +1,7 @@
-// util/Constants.kt
 package com.luki.play.util
 
 /**
  * Constantes globales del proyecto Luki Play Android.
- *
- * Arquitectura del servidor (98.80.97.51):
- * ─────────────────────────────────────────
- *   /home         → Portal web (React Native/Expo)  ← WebView carga esto
- *   /cms          → Panel CMS admin
- *   /public/*     → API REST pública (sin auth)
- *   /auth/*       → API de autenticación
- *   /admin/*      → API admin (requiere rol admin)
- *   /uploads/*    → Assets estáticos (logos, imágenes)
  */
 object Constants {
 
