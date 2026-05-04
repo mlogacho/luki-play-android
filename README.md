@@ -137,4 +137,4 @@ Ver [`TV_QUALITY_REPORT.md`](TV_QUALITY_REPORT.md) para el informe completo.
 
 ---
 
-*Luki Play © 2024 — Propietario. Todos los derechos reservados.*
+*Luki Play © 2026 — Propietario. Todos los derechos reservados.*
