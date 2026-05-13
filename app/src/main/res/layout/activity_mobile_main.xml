@@ -46,7 +46,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="32dp"
+        android:padding="@dimen/screen_margin_horizontal"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -60,19 +60,22 @@
             android:layout_height="wrap_content"
             android:text="@string/error_no_internet"
             android:textColor="@color/luki_text_primary"
-            android:textSize="16sp"
+            android:textSize="@dimen/text_h4"
             android:gravity="center"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="@dimen/space_lg"
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnRetry"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height_primary"
             android:text="@string/retry"
-            android:backgroundTint="@color/luki_cyan"
+            android:backgroundTint="@color/luki_focus"
             android:textColor="@color/luki_dark"
             android:textStyle="bold"
-            android:focusable="true" />
+            android:textSize="@dimen/text_body"
+            android:focusable="true"
+            android:contentDescription="@string/retry" />
 
     </LinearLayout>
 

@@ -6,10 +6,15 @@
     <color name="luki_dark">#0A0A0F</color>
     <color name="luki_focus">#FFD700</color>
     <color name="luki_text_primary">#FFFFFF</color>
+    <color name="luki_text_secondary">#E0E0E0</color>
     <color name="luki_surface">#1A1A24</color>
 
     <!-- ── Status / Semáforo ─────────────────────────────────────────────── -->
-    <color name="luki_error">#FF4C4C</color>
+    <color name="luki_error">#FF6B6B</color>
     <color name="luki_warning">#FFA500</color>
-    <color name="luki_success">#00C853</color>
+    <color name="luki_success">#4CAF50</color>
+
+    <!-- ── Bordes y divisores ───────────────────────────────────────────── -->
+    <color name="luki_border_light">@android:color/transparent</color>
+    <color name="luki_border_dark">#333333</color>
 </resources>

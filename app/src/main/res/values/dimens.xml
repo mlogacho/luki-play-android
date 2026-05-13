@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ══════════════════════════════════════════════════════
+         ESPACIADO — Escala de márgenes y padding
+         ══════════════════════════════════════════════════════ -->
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_sm">8dp</dimen>
+    <dimen name="space_md">16dp</dimen>
+    <dimen name="space_lg">24dp</dimen>
+    <dimen name="space_xl">32dp</dimen>
+    <dimen name="space_xxl">48dp</dimen>
+
+    <!-- ══════════════════════════════════════════════════════
+         MÁRGENES DE PANTALLA — Padding horizontal consistente
+         ══════════════════════════════════════════════════════ -->
+    <dimen name="screen_margin_horizontal">20dp</dimen>
+    <dimen name="screen_margin_vertical">24dp</dimen>
+
+    <!-- ══════════════════════════════════════════════════════
+         TAMAÑOS DE TEXTO — Escala tipográfica
+         ══════════════════════════════════════════════════════ -->
+    <dimen name="text_h1">34sp</dimen>
+    <dimen name="text_h2">28sp</dimen>
+    <dimen name="text_h3">22sp</dimen>
+    <dimen name="text_h4">18sp</dimen>
+    <dimen name="text_body_lg">16sp</dimen>
+    <dimen name="text_body">15sp</dimen>
+    <dimen name="text_body_sm">14sp</dimen>
+    <dimen name="text_caption">13sp</dimen>
+    <dimen name="text_overline">11sp</dimen>
+    <dimen name="text_badge">10sp</dimen>
+
+    <!-- ══════════════════════════════════════════════════════
+         COMPONENTES — Botones y elementos interactivos
+         ══════════════════════════════════════════════════════ -->
+    <dimen name="button_height_primary">48dp</dimen>
+    <dimen name="button_height_small">40dp</dimen>
+    <dimen name="button_radius">12dp</dimen>
+    <dimen name="button_icon_size">24dp</dimen>
+
+    <!-- ══════════════════════════════════════════════════════
+         ICONOS — Tamaños estándar
+         ══════════════════════════════════════════════════════ -->
+    <dimen name="icon_xs">16dp</dimen>
+    <dimen name="icon_sm">20dp</dimen>
+    <dimen name="icon_md">24dp</dimen>
+    <dimen name="icon_lg">32dp</dimen>
+    <dimen name="icon_xl">48dp</dimen>
+
+    <!-- ══════════════════════════════════════════════════════
+         TARJETAS — Bordes redondeados y sombras
+         ══════════════════════════════════════════════════════ -->
+    <dimen name="corner_radius_sm">8dp</dimen>
+    <dimen name="corner_radius_md">12dp</dimen>
+    <dimen name="corner_radius_lg">16dp</dimen>
+
+    <!-- ══════════════════════════════════════════════════════
+         INDICADORES DE CARGA — Elementos dinámicos
+         ══════════════════════════════════════════════════════ -->
+    <dimen name="progress_bar_size">56dp</dimen>
+    <dimen name="progress_bar_stroke">4dp</dimen>
+
+</resources>

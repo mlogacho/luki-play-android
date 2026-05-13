@@ -14,9 +14,10 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>
 
-        <!-- Texto -->
+        <!-- Texto — Mejorado para accesibilidad -->
         <item name="android:textColorPrimary">@color/luki_text_primary</item>
-        <item name="android:textColorSecondary">#B3FFFFFF</item>
+        <item name="android:textColorSecondary">@color/luki_text_secondary</item>
+        <item name="android:textSize">@dimen/text_body</item>
     </style>
 
     <!-- ══════════════════════════════════════════════════════
@@ -53,6 +54,53 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:statusBarColor">@color/luki_navy</item>
         <item name="android:navigationBarColor">@color/luki_navy</item>
+    </style>
+
+    <!-- ══════════════════════════════════════════════════════
+         ESTILOS DE COMPONENTES — Reutilizables
+         ══════════════════════════════════════════════════════ -->
+
+    <!-- Botón primario mejorado -->
+    <style name="Button.Primary" parent="Widget.AppCompat.Button">
+        <item name="android:minHeight">@dimen/button_height_primary</item>
+        <item name="android:minWidth">@dimen/button_height_primary</item>
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:backgroundTint">@color/luki_focus</item>
+    </style>
+
+    <!-- Texto de encabezado H1 -->
+    <style name="Text.H1">
+        <item name="android:textSize">@dimen/text_h1</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/luki_text_primary</item>
+    </style>
+
+    <!-- Texto de encabezado H2 -->
+    <style name="Text.H2">
+        <item name="android:textSize">@dimen/text_h2</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/luki_text_primary</item>
+    </style>
+
+    <!-- Texto de encabezado H3 -->
+    <style name="Text.H3">
+        <item name="android:textSize">@dimen/text_h3</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/luki_text_primary</item>
+    </style>
+
+    <!-- Texto de cuerpo principal -->
+    <style name="Text.Body">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textColor">@color/luki_text_primary</item>
+        <item name="android:lineSpacingMultiplier">1.5</item>
+    </style>
+
+    <!-- Texto de caption -->
+    <style name="Text.Caption">
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:textColor">@color/luki_text_secondary</item>
     </style>
 
 </resources>
