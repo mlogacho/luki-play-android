@@ -76,7 +76,7 @@ LukiPlay/
 ### Credenciales de prueba
 ```
 Usuario:    1720289063
-Contraseña: password123
+Contraseña: LukiTest123
 ```
 
 ### Cleartext HTTP
