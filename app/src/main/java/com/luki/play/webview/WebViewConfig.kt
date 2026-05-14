@@ -49,7 +49,7 @@ object WebViewConfig {
 
         // ── Viewport / Zoom ──────────────────────────────────────────────────
         settings.useWideViewPort      = true
-        settings.loadWithOverviewMode = true
+        settings.loadWithOverviewMode = false
         settings.setSupportZoom(false)
         settings.builtInZoomControls  = false
         settings.displayZoomControls  = false
