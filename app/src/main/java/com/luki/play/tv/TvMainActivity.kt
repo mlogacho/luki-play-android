@@ -37,12 +37,32 @@ class TvMainActivity : AppCompatActivity() {
          * Maps D-Pad events forwarded from [onKeyDown] to DOM focus traversal
          * and scroll so the web UI is navigable without a touch screen.
          */
+        private val TV_SCALE_JS = """
+            (function() {
+              if (window.__lukiTvScaleInstalled) return;
+              window.__lukiTvScaleInstalled = true;
+
+              // Ocultar texto de versión
+              document.querySelectorAll('*').forEach(function(el) {
+                if (el.children.length === 0 && el.textContent.trim().match(/^Versi/i)) {
+                  el.style.display = 'none';
+                }
+              });
+
+              // Solo zoom — no tocar el layout para no romper los clicks
+              document.body.style.zoom = '0.82';
+            })();
+        """.trimIndent()
+
         private val DPAD_JS = """
             (function() {
               if (window.__lukiDpadInstalled) return;
               window.__lukiDpadInstalled = true;
 
               document.addEventListener('keydown', function(e) {
+                // Defer to the web app when an on-screen TV keyboard is active
+                if (document.body && document.body.dataset && document.body.dataset.tvKeyboard) return;
+
                 var scrollAmt = 200;
                 switch(e.key) {
                   case 'ArrowUp':    window.scrollBy(0, -scrollAmt); break;
@@ -83,11 +103,15 @@ class TvMainActivity : AppCompatActivity() {
         WebViewConfig.apply(wv)
         WebViewConfig.enableThirdPartyCookies(wv)
 
+        // En TV, respetar el viewport que inyectamos vía JS
+        wv.settings.loadWithOverviewMode = true
+        wv.settings.useWideViewPort      = true
+
         wv.webViewClient = LukiWebViewClient(
             onPageStarted  = { showLoading(true) },
             onPageFinished = {
                 showLoading(false)
-                // Inject D-Pad navigation helper after every page load
+                wv.evaluateJavascript(TV_SCALE_JS, null)
                 wv.evaluateJavascript(DPAD_JS, null)
             },
             onError = { code, desc ->
