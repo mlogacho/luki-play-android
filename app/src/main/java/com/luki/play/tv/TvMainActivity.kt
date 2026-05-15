@@ -89,6 +89,13 @@ class TvMainActivity : AppCompatActivity() {
                   } else {
                     window.scrollBy(0, -200);
                   }
+                } else if (e.key === 'Tab') {
+                  e.preventDefault();
+                  var next = e.shiftKey
+                    ? (idx > 0 ? focusables[idx - 1] : null)
+                    : (idx >= 0 && idx < focusables.length - 1 ? focusables[idx + 1] : null);
+                  if (next) next.focus();
+                  else if (!e.shiftKey && focusables.length > 0) focusables[0].focus();
                 } else if (e.key === 'Enter') {
                   if (active && active !== document.body && active !== document.documentElement) {
                     active.click();
