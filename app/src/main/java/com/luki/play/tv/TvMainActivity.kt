@@ -59,20 +59,42 @@ class TvMainActivity : AppCompatActivity() {
               if (window.__lukiDpadInstalled) return;
               window.__lukiDpadInstalled = true;
 
-              document.addEventListener('keydown', function(e) {
-                // Defer to the web app when an on-screen TV keyboard is active
-                if (document.body && document.body.dataset && document.body.dataset.tvKeyboard) return;
+              function getFocusables() {
+                return Array.from(document.querySelectorAll(
+                  'input:not([disabled]), button:not([disabled]), a[href], select, textarea, [tabindex="0"]'
+                )).filter(function(el) {
+                  var r = el.getBoundingClientRect();
+                  return r.width > 0 && r.height > 0;
+                });
+              }
 
-                var scrollAmt = 200;
-                switch(e.key) {
-                  case 'ArrowUp':    window.scrollBy(0, -scrollAmt); break;
-                  case 'ArrowDown':  window.scrollBy(0,  scrollAmt); break;
-                  case 'ArrowLeft':  window.scrollBy(-scrollAmt, 0); break;
-                  case 'ArrowRight': window.scrollBy( scrollAmt, 0); break;
-                  case 'Enter':
-                    var el = document.activeElement;
-                    if (el) el.click();
-                    break;
+              document.addEventListener('keydown', function(e) {
+                var active = document.activeElement;
+                var focusables = getFocusables();
+                var idx = focusables.indexOf(active);
+
+                if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                  e.preventDefault();
+                  if (idx >= 0 && idx < focusables.length - 1) {
+                    focusables[idx + 1].focus();
+                  } else if (idx < 0 && focusables.length > 0) {
+                    focusables[0].focus();
+                  } else {
+                    window.scrollBy(0, 200);
+                  }
+                } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                  e.preventDefault();
+                  if (idx > 0) {
+                    focusables[idx - 1].focus();
+                  } else {
+                    window.scrollBy(0, -200);
+                  }
+                } else if (e.key === 'Enter') {
+                  if (active && active !== document.body && active !== document.documentElement) {
+                    active.click();
+                  } else if (focusables.length > 0) {
+                    focusables[0].focus();
+                  }
                 }
               }, true);
             })();
