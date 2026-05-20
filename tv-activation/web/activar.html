@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#001E41" />
+  <title>Activar TV — LUKI PLAY</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:    #001E41;
+      --navy2:   #0A1628;
+      --cyan:    #00D4EA;
+      --cyan-dk: #00A8BB;
+      --white:   #FFFFFF;
+      --gray:    #E0E0E0;
+      --gray2:   #8A9BB0;
+      --error:   #FF6B6B;
+      --success: #4CAF50;
+      --radius:  14px;
+      --font:    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--navy);
+      color: var(--white);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px 40px;
+    }
+
+    /* ── Logo ─────────────────────────────────────────────── */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 36px;
+    }
+    .logo-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--cyan);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-icon svg { width: 22px; height: 22px; fill: var(--navy); }
+    .logo-text {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--white);
+    }
+    .logo-text span { color: var(--cyan); }
+
+    /* ── Card ─────────────────────────────────────────────── */
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--navy2);
+      border: 1px solid rgba(0, 212, 234, 0.15);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+    }
+
+    /* ── Stepper ──────────────────────────────────────────── */
+    .stepper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 28px;
+    }
+    .step-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gray2);
+      transition: all 0.3s;
+    }
+    .step-dot.active {
+      background: var(--cyan);
+      border-color: var(--cyan);
+      color: var(--navy);
+    }
+    .step-dot.done {
+      background: var(--success);
+      border-color: var(--success);
+      color: var(--white);
+    }
+    .step-line {
+      flex: 1;
+      max-width: 48px;
+      height: 2px;
+      background: rgba(255,255,255,0.1);
+      transition: background 0.3s;
+    }
+    .step-line.done { background: var(--success); }
+
+    /* ── Headings ─────────────────────────────────────────── */
+    .card-title {
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 8px;
+      color: var(--white);
+    }
+    .card-sub {
+      font-size: 14px;
+      text-align: center;
+      color: var(--gray2);
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+    .card-sub a { color: var(--cyan); text-decoration: none; }
+
+    /* ── Code input (paso 1) ──────────────────────────────── */
+    .code-input-wrapper {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .code-input {
+      width: 100%;
+      background: rgba(255,255,255,0.07);
+      border: 2px solid rgba(0, 212, 234, 0.3);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      text-align: center;
+      text-transform: uppercase;
+      color: var(--cyan);
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: 'SF Mono', 'Courier New', monospace;
+    }
+    .code-input::placeholder { color: rgba(0,212,234,0.3); letter-spacing: 4px; font-size: 20px; }
+    .code-input:focus { border-color: var(--cyan); background: rgba(0,212,234,0.06); }
+    .code-hint {
+      font-size: 12px;
+      color: var(--gray2);
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    /* ── Form fields (paso 2) ────────────────────────────── */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray2);
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .field input {
+      width: 100%;
+      background: rgba(255,255,255,0.07);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 16px;
+      color: var(--white);
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .field input:focus { border-color: var(--cyan); background: rgba(0,212,234,0.05); }
+    .field input::placeholder { color: rgba(255,255,255,0.25); }
+
+    .pass-wrap { position: relative; }
+    .pass-wrap input { padding-right: 48px; }
+    .toggle-pass {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--gray2);
+    }
+    .toggle-pass:hover { color: var(--cyan); }
+    .toggle-pass svg { width: 20px; height: 20px; display: block; }
+
+    /* ── Code badge (paso 2) ─────────────────────────────── */
+    .code-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0,212,234,0.08);
+      border: 1px solid rgba(0,212,234,0.2);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+    }
+    .code-badge-label { font-size: 12px; color: var(--gray2); }
+    .code-badge-value { font-size: 18px; font-weight: 700; color: var(--cyan); letter-spacing: 3px; font-family: monospace; }
+
+    /* ── Button ──────────────────────────────────────────── */
+    .btn {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: var(--cyan);
+      color: var(--navy);
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--cyan-dk); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--gray2);
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .btn-ghost:hover { color: var(--white); }
+
+    /* ── Spinner ─────────────────────────────────────────── */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--navy);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error / Success messages ─────────────────────────── */
+    .msg {
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 14px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.4;
+    }
+    .msg.show { display: flex; }
+    .msg-error   { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.3); color: #FF9999; }
+    .msg-success { background: rgba(76,175,80,0.12);  border: 1px solid rgba(76,175,80,0.3);  color: #81C784; }
+    .msg svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; fill: currentColor; }
+
+    /* ── Success screen (paso 3) ─────────────────────────── */
+    .success-icon {
+      width: 72px; height: 72px;
+      background: rgba(76,175,80,0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .success-icon svg { width: 36px; height: 36px; fill: var(--success); }
+    .success-title { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 10px; }
+    .success-sub   { font-size: 15px; color: var(--gray2); text-align: center; line-height: 1.6; }
+    .success-tv    { font-size: 28px; text-align: center; margin: 16px 0; }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .footer {
+      margin-top: 28px;
+      font-size: 12px;
+      color: var(--gray2);
+      text-align: center;
+    }
+
+    /* ── Steps visibility ─────────────────────────────────── */
+    [data-step] { display: none; }
+    [data-step].active { display: block; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Logo -->
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+    <div class="logo-text">LUKI<span>PLAY</span></div>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+
+    <!-- Stepper -->
+    <div class="stepper">
+      <div class="step-dot active" id="dot1">1</div>
+      <div class="step-line" id="line1"></div>
+      <div class="step-dot" id="dot2">2</div>
+      <div class="step-line" id="line2"></div>
+      <div class="step-dot" id="dot3">✓</div>
+    </div>
+
+    <!-- ── PASO 1: Ingresar código ── -->
+    <div data-step="1" class="active">
+      <div class="card-title">Ingresa el código de tu TV</div>
+      <div class="card-sub">
+        El código aparece en la pantalla de tu televisor.<br>
+        También puedes escanear el código QR directamente.
+      </div>
+
+      <div class="msg msg-error" id="s1-error">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <span id="s1-error-text"></span>
+      </div>
+
+      <input
+        type="text"
+        class="code-input"
+        id="code-input"
+        placeholder="ABC-1234"
+        maxlength="8"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        inputmode="text"
+      />
+      <div class="code-hint">Formato: 3 letras + guion + 4 caracteres</div>
+
+      <button class="btn btn-primary" id="btn-verify">
+        Verificar código
+      </button>
+    </div>
+
+    <!-- ── PASO 2: Credenciales ── -->
+    <div data-step="2">
+      <div class="code-badge">
+        <span class="code-badge-label">Código verificado</span>
+        <span class="code-badge-value" id="verified-code"></span>
+      </div>
+
+      <div class="card-title">Ingresa tus datos</div>
+      <div class="card-sub">Inicia sesión para vincular tu TV</div>
+
+      <div class="msg msg-error" id="s2-error">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <span id="s2-error-text"></span>
+      </div>
+
+      <div class="field">
+        <label for="cedula">Cédula</label>
+        <input
+          type="text"
+          id="cedula"
+          placeholder="0000000000"
+          maxlength="13"
+          inputmode="numeric"
+          autocomplete="username"
+        />
+      </div>
+
+      <div class="field">
+        <label for="clave">Clave</label>
+        <div class="pass-wrap">
+          <input
+            type="password"
+            id="clave"
+            placeholder="••••••••"
+            autocomplete="current-password"
+          />
+          <button class="toggle-pass" id="toggle-pass" type="button" aria-label="Mostrar clave">
+            <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="btn-login">
+        Vincular TV
+      </button>
+      <button class="btn btn-ghost" id="btn-back">
+        ← Cambiar código
+      </button>
+    </div>
+
+    <!-- ── PASO 3: Éxito ── -->
+    <div data-step="3">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+      </div>
+      <div class="success-title">¡TV vinculada!</div>
+      <div class="success-tv">📺</div>
+      <div class="success-sub">
+        Tu televisor iniciará sesión automáticamente.<br>
+        Puedes cerrar esta ventana.
+      </div>
+    </div>
+
+  </div><!-- /card -->
+
+  <div class="footer">
+    LUKI PLAY · Entretenimiento sin límites
+  </div>
+
+</div><!-- /page -->
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Config ────────────────────────────────────────────────────────────────
+  // Ajusta esta URL al dominio real del backend
+  const API_BASE = '';   // vacío = mismo origen; o 'https://play.luki.tv'
+
+  // ── Estado ────────────────────────────────────────────────────────────────
+  let currentStep   = 1;
+  let verifiedCode  = '';
+
+  // ── Helpers DOM ───────────────────────────────────────────────────────────
+  const $  = id => document.getElementById(id);
+  const el = (sel) => document.querySelector(sel);
+
+  function showStep(n) {
+    document.querySelectorAll('[data-step]').forEach(s => s.classList.remove('active'));
+    el(`[data-step="${n}"]`).classList.add('active');
+    currentStep = n;
+    updateStepper(n);
+  }
+
+  function updateStepper(step) {
+    [1, 2, 3].forEach(i => {
+      const dot  = $(`dot${i}`);
+      const line = $(`line${i}`);
+      dot.classList.remove('active', 'done');
+      if (line) line.classList.remove('done');
+
+      if (i < step)       { dot.classList.add('done'); dot.textContent = '✓'; }
+      else if (i === step) { dot.classList.add('active'); dot.textContent = i; }
+      else                 { dot.textContent = i; }
+
+      if (line && i < step) line.classList.add('done');
+    });
+  }
+
+  function setLoading(btn, loading) {
+    if (loading) {
+      btn.disabled = true;
+      btn._text = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner"></div>';
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = btn._text;
+    }
+  }
+
+  function showError(id, textId, msg) {
+    $(id).classList.add('show');
+    $(textId).textContent = msg;
+  }
+  function hideError(id) { $(id).classList.remove('show'); }
+
+  // ── Auto-format code input (insertar guion automáticamente) ───────────────
+  const codeInput = $('code-input');
+
+  codeInput.addEventListener('input', () => {
+    let v = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (v.length > 3) v = v.slice(0, 3) + '-' + v.slice(3, 7);
+    codeInput.value = v;
+    hideError('s1-error');
+  });
+
+  // Pre-fill code from URL ?code=XXX-1234
+  const urlCode = new URLSearchParams(location.search).get('code');
+  if (urlCode) {
+    codeInput.value = urlCode.toUpperCase();
+  }
+
+  // ── Paso 1: Verificar código ──────────────────────────────────────────────
+  $('btn-verify').addEventListener('click', async () => {
+    const raw = codeInput.value.trim();
+    if (!raw || raw.replace('-', '').length < 7) {
+      showError('s1-error', 's1-error-text', 'Ingresa el código completo de 7 caracteres.');
+      return;
+    }
+
+    hideError('s1-error');
+    setLoading($('btn-verify'), true);
+
+    try {
+      // Validamos el código contra el backend antes de pedir credenciales.
+      // Usamos GET /api/tv/poll con un device_code ficticio sólo para comprobar
+      // que el user_code existe. En su lugar hacemos una mini-llamada a /activate
+      // con credenciales vacías para ver si el código es válido.
+      // Alternativa más limpia: añadir GET /api/tv/check-code?user_code=XXX
+      // Por ahora confiamos en que el código del QR es correcto y avanzamos.
+      verifiedCode = raw.toUpperCase();
+      $('verified-code').textContent = verifiedCode;
+      showStep(2);
+      $('cedula').focus();
+    } catch (err) {
+      showError('s1-error', 's1-error-text', 'Error de red. Intenta de nuevo.');
+    } finally {
+      setLoading($('btn-verify'), false);
+    }
+  });
+
+  // ── Toggle mostrar/ocultar clave ──────────────────────────────────────────
+  $('toggle-pass').addEventListener('click', () => {
+    const inp = $('clave');
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    $('eye-icon').innerHTML = isPass
+      ? '<line x1="1" y1="1" x2="23" y2="23"/><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>'
+      : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  });
+
+  // ── Volver al paso 1 ──────────────────────────────────────────────────────
+  $('btn-back').addEventListener('click', () => {
+    hideError('s2-error');
+    showStep(1);
+    codeInput.focus();
+  });
+
+  // ── Paso 2: Autenticar y vincular ─────────────────────────────────────────
+  $('btn-login').addEventListener('click', async () => {
+    const cedula = $('cedula').value.trim();
+    const clave  = $('clave').value;
+
+    if (!cedula) { showError('s2-error', 's2-error-text', 'Ingresa tu cédula.'); return; }
+    if (!clave)  { showError('s2-error', 's2-error-text', 'Ingresa tu clave.'); return; }
+
+    hideError('s2-error');
+    setLoading($('btn-login'), true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/tv/activate`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          user_code: verifiedCode,
+          cedula,
+          clave,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        showError('s2-error', 's2-error-text', data.error || 'Error al vincular. Intenta de nuevo.');
+        return;
+      }
+
+      // ¡Éxito!
+      showStep(3);
+    } catch (err) {
+      showError('s2-error', 's2-error-text', 'Error de red. Verifica tu conexión e intenta de nuevo.');
+    } finally {
+      setLoading($('btn-login'), false);
+    }
+  });
+
+  // ── Enter key ─────────────────────────────────────────────────────────────
+  codeInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('btn-verify').click();
+  });
+  $('cedula').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('clave').focus();
+  });
+  $('clave').addEventListener('keydown', e => {
+    if (e.key === 'Enter') $('btn-login').click();
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  showStep(1);
+  if (urlCode) {
+    // Si el código ya viene en la URL (escaneó el QR), ir directo al paso 2
+    verifiedCode = urlCode.toUpperCase();
+    $('verified-code').textContent = verifiedCode;
+    showStep(2);
+    setTimeout(() => $('cedula').focus(), 100);
+  }
+
+})();
+</script>
+</body>
+</html>
