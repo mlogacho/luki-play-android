@@ -182,6 +182,7 @@ class MobileMainActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun setupWebView() {
         val wv = binding.webView
+        wv.setBackgroundColor(android.graphics.Color.parseColor("#240046"))
         WebViewConfig.apply(wv)
         WebViewConfig.enableThirdPartyCookies(wv)
 

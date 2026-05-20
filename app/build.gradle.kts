@@ -106,5 +106,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.lifecycle.viewmodel.savedstate)
     implementation(libs.androidx.webkit)
+    implementation(libs.androidx.splashscreen)
     implementation(libs.kotlinx.coroutines.android)
 }

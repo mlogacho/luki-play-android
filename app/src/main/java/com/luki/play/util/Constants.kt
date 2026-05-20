@@ -65,7 +65,7 @@ object Constants {
 
     // ── Timeouts y delays ──────────────────────────────────────────────────
 
-    const val SPLASH_DELAY_MS      = 2300L   // Coincide con la animación del portal web
+    const val SPLASH_DELAY_MS      = 1500L
     const val API_TIMEOUT_MS       = 10_000  // 10 segundos
 
     // ── Android TV ─────────────────────────────────────────────────────────

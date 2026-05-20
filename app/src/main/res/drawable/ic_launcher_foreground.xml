@@ -19,6 +19,6 @@
     <!-- Triángulo "play" blanco centrado -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M46,40 L68,54 L46,68 Z" />
+        android:pathData="M47,41 L67,54 L47,67 Z" />
 
 </vector>

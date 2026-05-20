@@ -12,7 +12,7 @@
     android:id="@+id/mobileRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/luki_dark"
+    android:background="@color/luki_purple"
     tools:context=".mobile.MobileMainActivity">
 
     <!-- ── WebView principal ────────────────────────────────────────────── -->

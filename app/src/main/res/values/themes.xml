@@ -47,6 +47,16 @@
     <style name="Theme.LukiPlay.Fullscreen" parent="Theme.LukiPlay.Player" />
 
     <!-- ══════════════════════════════════════════════════════
+         TEMA ARRANQUE — SplashScreen API (Android 12+)
+         Elimina la pantalla blanca del sistema al abrir la app.
+         ══════════════════════════════════════════════════════ -->
+    <style name="Theme.LukiPlay.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/luki_dark</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_empty</item>
+        <item name="postSplashScreenTheme">@style/Theme.LukiPlay</item>
+    </style>
+
+    <!-- ══════════════════════════════════════════════════════
          TEMA SPLASH — Pantalla de inicio
          ══════════════════════════════════════════════════════ -->
     <style name="Theme.LukiPlay.Splash" parent="Base.Theme.LukiPlay">
