@@ -1,8 +1,11 @@
 <resources>
-    <string name="app_name">Luki Play</string>
+    <string name="app_name">LUKIPLAY</string>
 
     <!-- ── Mensajes de error generales ───────────────────────────────────── -->
-    <string name="error_no_internet">No hay conexión a internet. Verifica tu red.</string>
+    <string name="error_no_internet">Sin conexión a internet</string>
+    <string name="error_no_internet_detail">Verifica tu red e inténtalo de nuevo.</string>
+    <string name="error_server">Error del servidor</string>
+    <string name="error_server_detail">Ocurrió un problema. Inténtalo más tarde.</string>
     <string name="error_player">Ocurrió un error al reproducir el contenido.</string>
 
     <!-- ── Acciones ───────────────────────────────────────────────────────── -->
