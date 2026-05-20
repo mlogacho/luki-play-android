@@ -69,6 +69,11 @@
         <item name="android:backgroundTint">@color/luki_focus</item>
     </style>
 
+    <!-- Base style required by dot-notation children (Text.H1, Text.H2, etc.) -->
+    <style name="Text" parent="android:style/TextAppearance">
+        <item name="android:textColor">@color/luki_text_primary</item>
+    </style>
+
     <!-- Texto de encabezado H1 -->
     <style name="Text.H1">
         <item name="android:textSize">@dimen/text_h1</item>
