@@ -26,3 +26,6 @@ captures/
 
 # ── Logs ────────────────────────────────────────────────────────────────────
 *.log
+
+# Gradle daemon JVM config (machine-specific)
+gradle/gradle-daemon-jvm.properties
