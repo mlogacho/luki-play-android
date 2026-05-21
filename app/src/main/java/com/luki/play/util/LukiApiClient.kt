@@ -12,7 +12,7 @@ import java.net.URL
 object LukiApiClient {
 
     private const val TAG = "LukiApiClient"
-    private const val API_BASE = "http://98.80.97.51"
+    private const val API_BASE = "https://lukiplay.com"
     private const val TIMEOUT_MS = 10_000
 
     data class Channel(

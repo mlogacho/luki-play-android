@@ -49,8 +49,8 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             isDebuggable        = true
-            buildConfigField("String", "BASE_URL",     "\"http://98.80.97.51\"")
-            buildConfigField("String", "API_BASE_URL", "\"http://98.80.97.51\"")
+            buildConfigField("String", "BASE_URL",     "\"https://lukiplay.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://lukiplay.com\"")
         }
 
         release {
@@ -61,8 +61,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_URL",     "\"http://98.80.97.51\"")
-            buildConfigField("String", "API_BASE_URL", "\"http://98.80.97.51\"")
+            buildConfigField("String", "BASE_URL",     "\"https://lukiplay.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://lukiplay.com\"")
         }
     }
 

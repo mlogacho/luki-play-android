@@ -17,7 +17,7 @@ object Constants {
     const val BASE_URL = "$SERVER_BASE/home"
 
     /** URL base de la API REST */
-    const val API_BASE_URL = SERVER_BASE  // = http://98.80.97.51
+    const val API_BASE_URL = SERVER_BASE
 
     // ── Endpoints API ──────────────────────────────────────────────────────
 
