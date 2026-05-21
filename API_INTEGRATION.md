@@ -1,14 +1,21 @@
 # API_INTEGRATION.md — Luki Play Android ↔ CMS API
 
 > Guía de integración entre la app Android nativa y el backend de Luki Play.
-> Fecha de descubrimiento de la API: 2026-05-04
+> Fecha de descubrimiento de la API: 2026-05-04 | Migración HTTPS: 2026-05-21
 
 ---
 
-## Arquitectura del servidor `98.80.97.51`
+## Arquitectura del servidor
+
+| Dato         | Valor                      |
+|--------------|----------------------------|
+| Dominio      | `lukiplay.com`             |
+| IP EC2       | `98.80.97.51`              |
+| Protocolo    | HTTPS (Let's Encrypt)      |
+| Base URL     | `https://lukiplay.com`     |
 
 ```
-http://98.80.97.51
+https://lukiplay.com
 │
 ├── /home          → Portal web (Expo/React Native Web)  ← WebView carga esto
 ├── /cms           → Panel de administración CMS
@@ -44,7 +51,7 @@ http://98.80.97.51
 ]
 ```
 
-**Logos:** `http://98.80.97.51` + `/uploads/logos/...`
+**Logos:** `https://lukiplay.com` + `/uploads/logos/...`
 
 ---
 
@@ -88,7 +95,7 @@ http://98.80.97.51
 ## Integración Android — Flujo de autenticación
 
 ```
-WebView carga http://98.80.97.51/home
+WebView carga https://lukiplay.com/home
     ↓ usuario hace login en el portal web
     ↓ el portal recibe el JWT del backend
     ↓
@@ -134,7 +141,7 @@ if (window.LukiNative) {
   window.LukiNative.playStream(JSON.stringify({
     url:         streamUrl,          // HLS m3u8
     title:       canal.nombre,
-    poster:      `http://98.80.97.51${canal.logo}`,
+    poster:      `https://lukiplay.com${canal.logo}`,
     subtitleUri: canal.subtitulosUrl ?? null  // opcional
   }));
 } else {
@@ -165,7 +172,7 @@ const deviceInfo  = isNativeApp
 //   supportsPip:    bool,
 //   deviceId:       "abc123",    ← usar para /auth/app/*-login
 //   platform:       "android",
-//   apiBaseUrl:     "http://98.80.97.51"
+//   apiBaseUrl:     "https://lukiplay.com"
 // }
 ```
 
@@ -203,7 +210,7 @@ El CMS en `/cms/` tiene un agente Gemini integrado. Para garantizar compatibilid
 
 | Archivo | Rol |
 |---|---|
-| `util/Constants.kt` | Todas las rutas de la API |
+| `util/Constants.kt` | Todas las rutas de la API — `SERVER_HOST = "lukiplay.com"`, `SERVER_BASE = "https://lukiplay.com"` |
 | `util/LukiApiClient.kt` | Cliente HTTP nativo (canales, sliders, stream, auth) |
 | `bridge/LukiBridge.kt` | Persiste JWT + expone `deviceId` vía `getDeviceInfo()` |
-| `app/build.gradle.kts` | `BuildConfig.API_BASE_URL` = `http://98.80.97.51` |
+| `res/xml/network_security_config.xml` | `lukiplay.com` → HTTPS only; `98.80.97.51` + base-config → cleartext para streams IPTV |

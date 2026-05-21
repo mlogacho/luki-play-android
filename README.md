@@ -71,7 +71,11 @@ LukiPlay/
 ### URLs
 | Variable | Valor |
 |---|---|
-| `BASE_URL` (debug + release) | `http://98.80.97.51/home` |
+| `BASE_URL` (debug + release) | `https://lukiplay.com/home` |
+| `API_BASE_URL` | `https://lukiplay.com` |
+| `SERVER_HOST` | `lukiplay.com` |
+
+> Definidas en `util/Constants.kt`. La IP `98.80.97.51` era la URL anterior (HTTP).
 
 ### Credenciales de prueba
 ```
@@ -79,8 +83,10 @@ Usuario:    1720289063
 Contraseña: LukiTest123
 ```
 
-### Cleartext HTTP
-Solo permitido para `98.80.97.51` via `xml/network_security_config.xml`.
+### Cleartext HTTP y HTTPS
+`lukiplay.com` → **solo HTTPS** (`cleartextTrafficPermitted="false"`) en `xml/network_security_config.xml`.
+La política base permite cleartext para streams IPTV de terceros cuyo dominio no se conoce en compilación.
+El servidor de desarrollo `98.80.97.51` también mantiene una excepción explícita para cleartext.
 
 ---
 
@@ -89,7 +95,7 @@ Solo permitido para `98.80.97.51` via `xml/network_security_config.xml`.
 ```js
 // Lanzar reproductor HLS nativo
 window.LukiNative.playStream(JSON.stringify({
-  url: "http://98.80.97.51/stream.m3u8", title: "Canal HD", poster: "http://..."
+  url: "https://cdn.example.com/stream.m3u8", title: "Canal HD", poster: "https://..."
 }))
 
 // Detener reproductor
