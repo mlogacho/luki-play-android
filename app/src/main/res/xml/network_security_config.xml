@@ -9,9 +9,10 @@
 -->
 <network-security-config>
 
-    <!-- Política global: HTTPS obligatorio (Android 9+ ya lo impone; esto lo hace
-         explícito también para minSdk 21-27) -->
-    <base-config cleartextTrafficPermitted="false">
+    <!-- Política global: cleartext permitido para streams IPTV HTTP de proveedores
+         externos cuyos dominios/IPs no son conocidos en tiempo de compilación.
+         HTTPS sigue siendo preferido; producción (luki.ec) usará solo HTTPS. -->
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
