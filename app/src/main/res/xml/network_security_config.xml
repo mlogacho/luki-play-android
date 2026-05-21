@@ -28,11 +28,9 @@
         <domain includeSubdomains="true">test-streams.mux.dev</domain>
     </domain-config>
 
-    <!-- Producción: play.luki.tv — solo HTTPS (ya cubierto por base-config;
-         se declara explícitamente para documentar el BASE_URL del proyecto) -->
+    <!-- Producción: lukiplay.com — solo HTTPS, sin excepción -->
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">play.luki.tv</domain>
-        <domain includeSubdomains="true">luki.tv</domain>
+        <domain includeSubdomains="true">lukiplay.com</domain>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>

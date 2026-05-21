@@ -7,11 +7,11 @@ object Constants {
 
     // ── URLs base ──────────────────────────────────────────────────────────
 
-    /** IP del servidor Luki Play */
-    const val SERVER_HOST = "98.80.97.51"
+    /** Dominio de producción Luki Play */
+    const val SERVER_HOST = "lukiplay.com"
 
     /** URL base del servidor (sin trailing slash) */
-    const val SERVER_BASE = "http://$SERVER_HOST"
+    const val SERVER_BASE = "https://$SERVER_HOST"
 
     /** URL del portal web que carga el WebView como pantalla principal */
     const val BASE_URL = "$SERVER_BASE/home"
