@@ -25,13 +25,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:use_controller="true"
+        app:controller_layout_id="@layout/player_live_controls"
         app:show_buffering="when_playing"
         app:resize_mode="fit"
         app:surface_type="surface_view"
-        app:show_timeout="3000"
-        app:show_next_button="false"
-        app:show_previous_button="false"
-        app:show_subtitle_button="false" />
+        app:show_timeout="3000" />
 
     <!-- ── Loading indicator (centrado, visible mientras bufferiza) ───── -->
     <ProgressBar
