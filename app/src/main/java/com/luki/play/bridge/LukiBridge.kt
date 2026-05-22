@@ -148,6 +148,50 @@ class LukiBridge(
     }
 
     /**
+     * Devuelve la sesión persistida en SharedPreferences como JSON, para que
+     * la web pueda hidratar su authStore al arrancar y evitar volver a pedir
+     * el escaneo del QR tras cerrar/abrir la app.
+     *
+     * JS usage:
+     * ```js
+     * const raw = window.LukiNative.getStoredSession();
+     * const { accessToken, refreshToken, userId, displayName } = JSON.parse(raw);
+     * ```
+     *
+     * Returns `"{}"` si no hay sesión.
+     */
+    @JavascriptInterface
+    fun getStoredSession(): String {
+        val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+        val refresh = prefs.getString(Constants.KEY_REFRESH_TOKEN, null)
+        if (refresh.isNullOrBlank()) return "{}"
+        return JSONObject().apply {
+            put("accessToken",  prefs.getString(Constants.KEY_ACCESS_TOKEN, "") ?: "")
+            put("refreshToken", refresh)
+            put("userId",       prefs.getString(Constants.KEY_USER_ID, "") ?: "")
+            put("displayName",  prefs.getString(Constants.KEY_DISPLAY_NAME, "") ?: "")
+        }.toString()
+    }
+
+    /**
+     * Borra los tokens persistidos. La web debe llamarla al hacer logout para
+     * que el próximo arranque vuelva a la pantalla de activación.
+     *
+     * JS usage: `window.LukiNative.clearStoredSession()`
+     */
+    @JavascriptInterface
+    fun clearStoredSession() {
+        Log.i(TAG, "clearStoredSession()")
+        val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .remove(Constants.KEY_ACCESS_TOKEN)
+            .remove(Constants.KEY_REFRESH_TOKEN)
+            .remove(Constants.KEY_USER_ID)
+            .remove(Constants.KEY_DISPLAY_NAME)
+            .apply()
+    }
+
+    /**
      * Notify native that the user logged out.
      * Clears WebView cookies/storage via [onLogout] callback.
      *
@@ -156,6 +200,7 @@ class LukiBridge(
     @JavascriptInterface
     fun logout() {
         Log.i(TAG, "logout()")
+        clearStoredSession()
         onLogout()
     }
 
