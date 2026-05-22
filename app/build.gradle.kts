@@ -39,9 +39,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile     = file("../keystore/luki-play-release.keystore")
-            storePassword = (keystoreProps["KEYSTORE_PASS"] as? String) ?: "LukiPlay2024!"
+            storePassword = keystoreProps["KEYSTORE_PASS"] as String
             keyAlias      = "luki-play-release"
-            keyPassword   = (keystoreProps["KEY_PASS"] as? String)      ?: "LukiPlay2024!"
+            keyPassword   = keystoreProps["KEY_PASS"] as String
         }
     }
 
