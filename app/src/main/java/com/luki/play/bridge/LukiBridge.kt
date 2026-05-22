@@ -139,7 +139,7 @@ class LukiBridge(
                 obj.optString("displayName").ifBlank { null }?.let {
                     putString(Constants.KEY_DISPLAY_NAME, it)
                 }
-                apply()
+                commit()
             }
             Log.i(TAG, "Token persisted for user: ${obj.optString("userId")}")
         } catch (e: Exception) {
@@ -188,7 +188,7 @@ class LukiBridge(
             .remove(Constants.KEY_REFRESH_TOKEN)
             .remove(Constants.KEY_USER_ID)
             .remove(Constants.KEY_DISPLAY_NAME)
-            .apply()
+            .commit()
     }
 
     /**
