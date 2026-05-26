@@ -146,12 +146,34 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
     }
 
     // ------------------------------------------------------------------ //
-    //  Live-stream controls — handled by player_live_controls.xml layout
+    //  Live-stream controls — strip seekbar / ±15 / ±5 / speed gear
     // ------------------------------------------------------------------ //
 
-    // The custom controller layout contains only a play/pause button and
-    // EN VIVO badge — no seekbar, no rewind/fwd. Nothing to configure here.
-    private fun configureLiveControls() = Unit
+    /**
+     * Luki Play sólo emite canales lineales en vivo, así que seekbar,
+     * fast-forward/rewind, time labels y el gear de ajustes (que incluye
+     * velocidad de reproducción) son irrelevantes y confunden al usuario.
+     * Los desactivamos aquí — next/prev/subtitles ya están en el XML.
+     */
+    private fun configureLiveControls() {
+        val pv = binding.playerView
+        pv.setShowFastForwardButton(false)
+        pv.setShowRewindButton(false)
+        pv.setShowNextButton(false)
+        pv.setShowPreviousButton(false)
+        pv.setShowSubtitleButton(false)
+
+        // Las vistas que no tienen API directa (seekbar, tiempo, gear de
+        // ajustes) se ocultan por id. Los ids viven en androidx.media3.ui.
+        intArrayOf(
+            androidx.media3.ui.R.id.exo_progress,
+            androidx.media3.ui.R.id.exo_position,
+            androidx.media3.ui.R.id.exo_duration,
+            androidx.media3.ui.R.id.exo_settings,
+        ).forEach { id ->
+            pv.findViewById<View>(id)?.visibility = View.GONE
+        }
+    }
 
     // ------------------------------------------------------------------ //
     //  Initialisation
