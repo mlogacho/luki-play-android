@@ -1,6 +1,6 @@
-# LukiPlay — Android, Google TV, iOS bootstrap
+# Luki Play — Android & Google TV
 
-> Aplicación híbrida WebView + Media3 ExoPlayer para la plataforma OTT LukiPlay.  
+> Aplicación híbrida WebView + Media3 ExoPlayer para la plataforma OTT Luki Play.  
 > Compatible con **Android móvil** (minSdk 21) y **Android TV / Google TV** (Leanback).
 
 ---

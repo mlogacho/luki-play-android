@@ -24,5 +24,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LukiPlay"
+rootProject.name = "LukiPlayAndroid"
 include(":app")
