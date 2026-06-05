@@ -17,14 +17,12 @@ android {
         applicationId   = "com.luki.play"
         minSdk          = 21
         targetSdk       = 35
-        versionCode     = 2
-        versionName     = "1.0.1"
+        versionCode     = 3
+        versionName     = "1.0.2"
 
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // FORZAR inclusión de todas las arquitecturas en un solo APK
-        // Esto soluciona el error de "Split APKs" en dispositivos de TV y emuladores
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
@@ -47,6 +45,7 @@ android {
 
     buildTypes {
         debug {
+            // Se mantiene el sufijo para pruebas locales
             applicationIdSuffix = ".debug"
             isDebuggable        = true
             buildConfigField("String", "BASE_URL",     "\"https://lukiplay.com\"")
@@ -71,9 +70,6 @@ android {
         buildConfig  = true
     }
 
-    // ── ABI Splits ──────────────────────────────────────────────────────────
-    // IMPORTANTE: Desactivar explícitamente y resetear para que no queden 
-    // APKs residuales de configuraciones anteriores.
     splits {
         abi {
             isEnable = false
