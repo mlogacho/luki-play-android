@@ -151,9 +151,16 @@ class MobileMainActivity : AppCompatActivity() {
         setupRetry()
         setupWebView()
         setupBackPress()
-        binding.webView.loadUrl(BuildConfig.BASE_URL)
-        Timber.tag(TAG).d("Loading: ${BuildConfig.BASE_URL}")
+        binding.webView.loadUrl(mobileLoginUrl())
+        Timber.tag(TAG).d("Loading: ${mobileLoginUrl()}")
     }
+
+    /**
+     * URL de login para móvil. A diferencia de TV (que carga la pantalla de
+     * activación por QR en BASE_URL), el móvil abre el login con formulario/URL.
+     */
+    private fun mobileLoginUrl(): String =
+        BuildConfig.BASE_URL.trimEnd('/') + "/login"
 
     // ── Edge-to-edge insets ───────────────────────────────────────────────────
 
@@ -283,8 +290,8 @@ class MobileMainActivity : AppCompatActivity() {
         binding.webView.clearCache(true)
         binding.webView.clearHistory()
         android.webkit.CookieManager.getInstance().removeAllCookies(null)
-        binding.webView.loadUrl(BuildConfig.BASE_URL)
-        Timber.tag(TAG).d("WebView session cleared — reloading base URL")
+        binding.webView.loadUrl(mobileLoginUrl())
+        Timber.tag(TAG).d("WebView session cleared — reloading login URL")
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
