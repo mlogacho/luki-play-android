@@ -20,7 +20,7 @@ android {
         applicationId   = "com.luki.play"
         minSdk          = 23
         targetSdk       = 35
-        versionCode     = 3
+        versionCode     = 4
         versionName     = "1.0.2"
 
         vectorDrawables.useSupportLibrary = true
@@ -29,6 +29,10 @@ android {
         ndk {
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+            // Empaqueta los símbolos de depuración nativos en el AAB para que
+            // Google Play pueda simbolizar los stack traces de crashes/ANR del
+            // código nativo (.so). Elimina la advertencia de la Console.
+            debugSymbolLevel = "FULL"
         }
     }
 
