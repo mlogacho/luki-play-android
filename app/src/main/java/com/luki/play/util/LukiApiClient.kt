@@ -1,13 +1,18 @@
 package com.luki.play.util
 
-import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
+import timber.log.Timber
 import java.net.HttpURLConnection
 import java.net.URL
 
 /**
  * Cliente HTTP ligero para la API REST de Luki Play.
+ *
+ * NOTA (Fase 1): este cliente queda como **shim de compatibilidad** mientras
+ * se migran los call-sites a [com.luki.play.data.auth.AuthRepository] y a los
+ * futuros repositorios de Catálogo y Streams (Retrofit/Moshi). No añadir más
+ * endpoints aquí; ampliar la capa nativa en su lugar.
  */
 object LukiApiClient {
 
@@ -71,7 +76,7 @@ object LukiApiClient {
                 )
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing channels", e)
+            Timber.tag(TAG).e(e, "Error parsing channels")
             emptyList()
         }
     }
@@ -85,7 +90,7 @@ object LukiApiClient {
                 sessionId = obj.optString("sessionId").ifBlank { null }
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing stream", e)
+            Timber.tag(TAG).e(e, "Error parsing stream")
             null
         }
     }
@@ -106,7 +111,7 @@ object LukiApiClient {
                 )
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing sliders", e)
+            Timber.tag(TAG).e(e, "Error parsing sliders")
             emptyList()
         }
     }
@@ -144,11 +149,11 @@ object LukiApiClient {
             if (conn.responseCode in 200..299) {
                 conn.inputStream.bufferedReader().readText()
             } else {
-                Log.w(TAG, "GET $path -> ${conn.responseCode}")
+                Timber.tag(TAG).w("GET %s -> %d", path, conn.responseCode)
                 null
             }
         } catch (e: Exception) {
-            Log.e(TAG, "GET $path failed", e)
+            Timber.tag(TAG).e(e, "GET %s failed", path)
             null
         }
     }
@@ -168,10 +173,10 @@ object LukiApiClient {
             }
             val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
             val response = stream?.bufferedReader()?.readText()
-            Log.d(TAG, "POST $path -> ${conn.responseCode}: $response")
+            Timber.tag(TAG).d("POST %s -> %d: %s", path, conn.responseCode, response)
             if (conn.responseCode in 200..299) response else null
         } catch (e: Exception) {
-            Log.e(TAG, "POST $path failed", e)
+            Timber.tag(TAG).e(e, "POST %s failed", path)
             null
         }
     }
@@ -186,7 +191,7 @@ object LukiApiClient {
                 displayName  = obj.optString("nombre", obj.optString("name", ""))
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing auth result", e)
+            Timber.tag(TAG).e(e, "Error parsing auth result")
             null
         }
     }

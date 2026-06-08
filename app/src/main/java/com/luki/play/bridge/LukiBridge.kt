@@ -288,7 +288,7 @@ class LukiBridge(
 
     private fun launchPlayer(config: StreamConfig) {
         val intent = PlayerActivity.newIntent(context, config)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
 }

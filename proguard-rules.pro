@@ -2,12 +2,10 @@
 # Aplicadas únicamente en el build release (isMinifyEnabled = true)
 
 # ── Media3 / ExoPlayer ────────────────────────────────────────────────────────
-# Conservar todas las clases de Media3 para evitar errores en tiempo de ejecución
 -keep class androidx.media3.** { *; }
 -dontwarn androidx.media3.**
 
 # ── WebView JavaScript Bridge ─────────────────────────────────────────────────
-# Los métodos anotados con @JavascriptInterface deben sobrevivir la ofuscación
 -keepclassmembers class com.luki.play.bridge.LukiBridge {
     @android.webkit.JavascriptInterface <methods>;
 }
@@ -19,7 +17,15 @@
 # ── AndroidX Lifecycle ────────────────────────────────────────────────────────
 -keep class androidx.lifecycle.** { *; }
 
+# ── Timber ────────────────────────────────────────────────────────────────────
+# Timber usa reflexión para el tag automático; mantener nombres de clases.
+-dontwarn org.jetbrains.annotations.**
+-keep class timber.log.** { *; }
+
+# ── AndroidX Security Crypto (EncryptedSharedPreferences) ────────────────────
+-keep class androidx.security.crypto.** { *; }
+-dontwarn androidx.security.crypto.**
+
 # ── Reglas generales de depuración ───────────────────────────────────────────
-# Preservar información de línea para stack traces legibles en producción
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile

@@ -6,6 +6,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.compose.compiler)
 }
 
 
@@ -15,7 +18,7 @@ android {
 
     defaultConfig {
         applicationId   = "com.luki.play"
-        minSdk          = 21
+        minSdk          = 23
         targetSdk       = 35
         versionCode     = 2
         versionName     = "1.0.1"
@@ -49,8 +52,11 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             isDebuggable        = true
-            buildConfigField("String", "BASE_URL",     "\"https://lukiplay.com\"")
-            buildConfigField("String", "API_BASE_URL", "\"https://lukiplay.com\"")
+            buildConfigField("String",  "BASE_URL",     "\"https://lukiplay.com\"")
+            buildConfigField("String",  "API_BASE_URL", "\"https://lukiplay.com\"")
+            // Feature flags
+            buildConfigField("boolean", "NATIVE_HOME_ENABLED", "true")
+            buildConfigField("boolean", "OFFLINE_DOWNLOADS_ENABLED", "true")
         }
 
         release {
@@ -61,14 +67,18 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "BASE_URL",     "\"https://lukiplay.com\"")
-            buildConfigField("String", "API_BASE_URL", "\"https://lukiplay.com\"")
+            buildConfigField("String",  "BASE_URL",     "\"https://lukiplay.com\"")
+            buildConfigField("String",  "API_BASE_URL", "\"https://lukiplay.com\"")
+            // En release el Compose nativo arranca apagado hasta rollout gradual
+            buildConfigField("boolean", "NATIVE_HOME_ENABLED", "false")
+            buildConfigField("boolean", "OFFLINE_DOWNLOADS_ENABLED", "false")
         }
     }
 
     buildFeatures {
         viewBinding  = true
         buildConfig  = true
+        compose      = true
     }
 
     // ── ABI Splits ──────────────────────────────────────────────────────────
@@ -92,11 +102,7 @@ android {
 }
 
 dependencies {
-    implementation(libs.media3.exoplayer)
-    implementation(libs.media3.exoplayer.hls)
-    implementation(libs.media3.ui)
-    implementation(libs.media3.session)
-    implementation(libs.media3.common)
+    implementation(libs.bundles.media3.playback)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.appcompat)
@@ -108,4 +114,48 @@ dependencies {
     implementation(libs.androidx.webkit)
     implementation(libs.androidx.splashscreen)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.security.crypto)
+    implementation(libs.timber)
+
+    // ── Hilt (DI) ────────────────────────────────────────────────────────────
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+
+    // ── Networking (Retrofit + OkHttp + Moshi) ───────────────────────────────
+    implementation(libs.bundles.network)
+    ksp(libs.moshi.codegen)
+
+    // ── Compose (móvil) ──────────────────────────────────────────────────────
+    implementation(platform(libs.compose.bom))
+    implementation(libs.bundles.compose)
+    debugImplementation(libs.compose.ui.tooling)
+
+    // ── Compose for TV ───────────────────────────────────────────────────────
+    implementation(libs.bundles.tv)
+
+    // ── Room (caché offline catálogo) ────────────────────────────────────────
+    implementation(libs.bundles.room)
+    ksp(libs.room.compiler)
+
+    // ── WorkManager (descargas + recommendations) ────────────────────────────
+    implementation(libs.work.runtime)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.work.compiler)
+
+    // ── Chromecast (Cast Framework + Media3 Cast extension) ──────────────────
+    implementation(libs.cast.framework)
+    implementation(libs.media3.cast)
+
+    // ── Tests ────────────────────────────────────────────────────────────────
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation("org.json:json:20240303")
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

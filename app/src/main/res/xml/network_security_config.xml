@@ -2,28 +2,36 @@
 <!--
     network_security_config.xml — Luki Play Android
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    • HTTPS es el protocolo por defecto para todos los dominios.
-    • Cleartext (HTTP) solo se permite para dominios explícitamente
-      listados (servidor de desarrollo y streams de prueba).
-    • BASE_URL de producción (play.luki.tv) → solo HTTPS, sin excepción.
+    Política:
+      • base-config → cleartext PROHIBIDO (por defecto HTTPS para todo).
+      • Servidor de desarrollo (98.80.97.51) → cleartext SOLO en debug flavor.
+        Declarado aquí para que funcione con ambos flavors; en el fichero de
+        override de debug (res/xml/network_security_config.xml) se podría
+        activar también, pero mantenerlo aquí simplifica la config.
+      • test-streams.mux.dev → cleartext permitido (redirecciones HTTP en CI/QA).
+      • lukiplay.com → HTTPS estricto, sin excepciones.
+      • Streams IPTV externos (IPs/dominios desconocidos) se sirven vía HLS
+        a través del player nativo, no del WebView; el player acepta HTTP
+        explícitamente por la naturaleza de IPTV open streams.
+        Si se requiere HTTPS en streams, eliminar el domain-config de mux y
+        el cleartext del servidor dev.
 -->
 <network-security-config>
 
-    <!-- Política global: cleartext permitido para streams IPTV HTTP de proveedores
-         externos cuyos dominios/IPs no son conocidos en tiempo de compilación.
-         HTTPS sigue siendo preferido; producción (luki.ec) usará solo HTTPS. -->
-    <base-config cleartextTrafficPermitted="true">
+    <!-- Política global: cleartext PROHIBIDO.
+         Toda la comunicación con el backend y el portal web va por HTTPS. -->
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
 
-    <!-- Servidor de desarrollo interno (HTTP cleartext permitido) -->
+    <!-- Servidor de desarrollo interno — solo HTTP local (dev/QA) -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">98.80.97.51</domain>
     </domain-config>
 
-    <!-- Streams de prueba Mux (HTTP cleartext permitido por posibles redirecciones) -->
+    <!-- Streams de prueba Mux (HTTP en redirecciones — solo QA/CI) -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">test-streams.mux.dev</domain>
     </domain-config>

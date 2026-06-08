@@ -3,7 +3,6 @@ package com.luki.play.webview
 
 import android.graphics.Bitmap
 import android.net.http.SslError
-import android.util.Log
 import android.webkit.SslErrorHandler
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -11,6 +10,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.annotation.MainThread
+import timber.log.Timber
 
 /**
  * Custom [WebViewClient] for Luki Play.
@@ -44,14 +44,14 @@ class LukiWebViewClient(
     @MainThread
     override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
         super.onPageStarted(view, url, favicon)
-        Log.d(TAG, "onPageStarted: $url")
+        Timber.tag(TAG).d("onPageStarted: %s", url)
         onPageStarted()
     }
 
     @MainThread
     override fun onPageFinished(view: WebView, url: String?) {
         super.onPageFinished(view, url)
-        Log.d(TAG, "onPageFinished: $url")
+        Timber.tag(TAG).d("onPageFinished: %s", url)
         onPageFinished()
     }
 
@@ -74,7 +74,7 @@ class LukiWebViewClient(
             } else {
                 "Load error"
             }
-            Log.e(TAG, "onReceivedError: code=$code desc=$desc url=${request.url}")
+            Timber.tag(TAG).e("onReceivedError: code=%d desc=%s url=%s", code, desc, request.url)
             onError(code, desc)
         }
     }
@@ -86,7 +86,7 @@ class LukiWebViewClient(
     ) {
         if (request.isForMainFrame) {
             val code = errorResponse.statusCode
-            Log.e(TAG, "onReceivedHttpError: status=$code url=${request.url}")
+            Timber.tag(TAG).e("onReceivedHttpError: status=%d url=%s", code, request.url)
             if (code >= 500) {
                 onError(code, "HTTP $code")
             }
@@ -101,7 +101,7 @@ class LukiWebViewClient(
      * NOTE: Do NOT call handler.proceed() for arbitrary SSL errors in production.
      */
     override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
-        Log.w(TAG, "onReceivedSslError: $error — cancelling request")
+        Timber.tag(TAG).w("onReceivedSslError: %s — cancelling request", error)
         handler.cancel()
         onError(-2, "SSL error: ${error.primaryError}")
     }
@@ -122,11 +122,11 @@ class LukiWebViewClient(
 
         return if (host == LUKI_HOST || host.endsWith(".$LUKI_HOST")) {
             // Trusted host → let WebView load it normally
-            Log.d(TAG, "shouldOverrideUrlLoading: allowing $url")
+            Timber.tag(TAG).d("shouldOverrideUrlLoading: allowing %s", url)
             false
         } else {
             // External host → block silently (or open in browser if needed)
-            Log.w(TAG, "shouldOverrideUrlLoading: blocking external URL $url")
+            Timber.tag(TAG).w("shouldOverrideUrlLoading: blocking external URL %s", url)
             true
         }
     }

@@ -62,6 +62,13 @@
     <!-- ════════════════════════════════════════════════════════
          APLICACIÓN
          ════════════════════════════════════════════════════════ -->
+    <queries>
+        <!-- Necesario para que el Cast Framework descubra el MediaRouter. -->
+        <intent>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent>
+    </queries>
+
     <application
         android:name=".LukiApplication"
         android:allowBackup="false"
@@ -74,6 +81,11 @@
         android:theme="@style/Theme.LukiPlay.Splash"
         android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="34">
+
+        <!-- Cast Framework auto-discovery -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.luki.play.cast.LukiCastOptionsProvider" />
 
         <!-- ──────────────────────────────────────────────────────
              SplashActivity — Punto de entrada único
@@ -127,6 +139,16 @@
             android:windowSoftInputMode="adjustNothing"
             android:hardwareAccelerated="true" />
 
+        <!-- TvComposeActivity — Android TV nativo en Compose for TV (Fase 4) -->
+        <activity
+            android:name=".tv.TvComposeActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:theme="@style/Theme.LukiPlay"
+            android:windowSoftInputMode="adjustNothing"
+            android:hardwareAccelerated="true" />
+
         <!-- ──────────────────────────────────────────────────────
              MobileMainActivity — WebView para móvil / tablet
              ──────────────────────────────────────────────────────
@@ -134,6 +156,21 @@
         -->
         <activity
             android:name=".mobile.MobileMainActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:theme="@style/Theme.LukiPlay"
+            android:windowSoftInputMode="adjustResize"
+            android:hardwareAccelerated="true" />
+
+        <!-- ──────────────────────────────────────────────────────
+             MobileComposeActivity — móvil nativo en Compose (Fase 3)
+             ──────────────────────────────────────────────────────
+             Detrás de BuildConfig.NATIVE_HOME_ENABLED. RouterActivity
+             decide entre ésta y MobileMainActivity en función del flag.
+        -->
+        <activity
+            android:name=".mobile.MobileComposeActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
@@ -161,6 +198,27 @@
              launchMode=singleTop evita doble instancia al rotar.
              keepScreenOn gestionado por el tema Player.
         -->
+        <!-- ──────────────────────────────────────────────────────
+             LukiDownloadService — descargas offline (Media3) (Fase 5)
+             ────────────────────────────────────────────────────── -->
+        <service
+            android:name=".data.downloads.LukiDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- Desactivar auto-init de WorkManager para que se use el
+             Configuration.Provider con HiltWorkerFactory en LukiApplication. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
         <activity
             android:name=".player.PlayerActivity"
             android:exported="false"
@@ -168,6 +226,8 @@
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
             android:theme="@style/Theme.LukiPlay.Player"
             android:launchMode="singleTop"
+            android:supportsPictureInPicture="true"
+            android:resizeableActivity="true"
             android:hardwareAccelerated="true" />
 
     </application>

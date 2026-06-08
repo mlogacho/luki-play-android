@@ -3,7 +3,6 @@ package com.luki.play.mobile
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
@@ -17,10 +16,14 @@ import androidx.core.view.WindowInsetsCompat
 import com.luki.play.BuildConfig
 import com.luki.play.R
 import com.luki.play.bridge.LukiBridge
+import com.luki.play.data.auth.TokenStore
 import com.luki.play.databinding.ActivityMobileMainBinding
 import com.luki.play.util.DeviceUtils
 import com.luki.play.webview.LukiWebViewClient
 import com.luki.play.webview.WebViewConfig
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import timber.log.Timber
 
 /**
  * **Mobile WebView Activity** for Luki Play.
@@ -35,6 +38,7 @@ import com.luki.play.webview.WebViewConfig
  *  - Horizontal LinearProgressIndicator tracks page load progress.
  *  - Error overlay differentiates network vs server errors.
  */
+@AndroidEntryPoint
 class MobileMainActivity : AppCompatActivity() {
 
     companion object {
@@ -135,6 +139,8 @@ class MobileMainActivity : AppCompatActivity() {
     private var lastBackPressTime = 0L
     private val deviceUtils by lazy { DeviceUtils.createImpl(this) }
 
+    @Inject lateinit var tokenStore: TokenStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Edge-to-edge disabled: the Expo/RN-Web portal manages its own safe-area insets
@@ -146,7 +152,7 @@ class MobileMainActivity : AppCompatActivity() {
         setupWebView()
         setupBackPress()
         binding.webView.loadUrl(BuildConfig.BASE_URL)
-        Log.d(TAG, "Loading: ${BuildConfig.BASE_URL}")
+        Timber.tag(TAG).d("Loading: ${BuildConfig.BASE_URL}")
     }
 
     // ── Edge-to-edge insets ───────────────────────────────────────────────────
@@ -209,7 +215,7 @@ class MobileMainActivity : AppCompatActivity() {
             }
 
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                Log.d("LukiJS", "[${message.messageLevel()}] ${message.message()}")
+                Timber.tag("LukiJS").d("[${message.messageLevel()}] ${message.message()}")
                 return true
             }
         }
@@ -259,7 +265,7 @@ class MobileMainActivity : AppCompatActivity() {
     }
 
     private fun showError(code: Int, description: String) {
-        Log.e(TAG, "Page error $code: $description")
+        Timber.tag(TAG).e("Page error $code: $description")
         val (title, detail) = if (code in NETWORK_ERROR_CODES) {
             getString(R.string.error_no_internet) to getString(R.string.error_no_internet_detail)
         } else {
@@ -278,7 +284,7 @@ class MobileMainActivity : AppCompatActivity() {
         binding.webView.clearHistory()
         android.webkit.CookieManager.getInstance().removeAllCookies(null)
         binding.webView.loadUrl(BuildConfig.BASE_URL)
-        Log.d(TAG, "WebView session cleared — reloading base URL")
+        Timber.tag(TAG).d("WebView session cleared — reloading base URL")
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
