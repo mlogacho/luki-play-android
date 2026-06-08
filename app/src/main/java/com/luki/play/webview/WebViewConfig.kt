@@ -6,6 +6,7 @@ import android.os.Build
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
+import com.luki.play.BuildConfig
 
 /**
  * Configures a [WebView] instance with the settings required for Luki Play.
@@ -59,11 +60,15 @@ object WebViewConfig {
         settings.cacheMode = WebSettings.LOAD_DEFAULT
 
         // ── Mixed content (HTTP inside HTTPS) ────────────────────────────────
-        // Required because our server is plain HTTP (98.80.97.51).
-        // ALWAYS_ALLOW is acceptable here because network_security_config.xml
-        // already restricts cleartext to that single IP.
+        // En debug: ALWAYS_ALLOW para que el servidor de desarrollo (98.80.97.51)
+        // funcione sin fricciones. En release: COMPATIBILITY_MODE que permite
+        // recursos pasivos (imágenes, audio) pero bloquea activos (scripts, XHR).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            settings.mixedContentMode = if (BuildConfig.DEBUG) {
+                WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            } else {
+                WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            }
         }
 
         // ── User-Agent ───────────────────────────────────────────────────────

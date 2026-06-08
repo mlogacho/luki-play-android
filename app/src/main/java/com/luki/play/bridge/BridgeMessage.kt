@@ -18,16 +18,21 @@ sealed class BridgeMessage {
     // ------------------------------------------------------------------ //
 
     /**
-     * Web requests native HLS playback.
+     * Web requests native HLS / DASH playback.
      *
-     * JSON shape:
+     * JSON shape (campos DRM opcionales):
      * ```json
      * {
-     *   "url":              "http://...",
+     *   "url":              "https://.../playlist.m3u8",
      *   "title":            "Canal HD",
-     *   "poster":           "http://...",
-     *   "subtitleUri":      "http://.../subs.vtt",
-     *   "subtitleMimeType": "text/vtt"
+     *   "poster":           "https://.../thumb.jpg",
+     *   "subtitleUri":      "https://.../subs.vtt",
+     *   "subtitleMimeType": "text/vtt",
+     *   "manifestType":     "HLS" | "DASH",
+     *   "drmScheme":        "WIDEVINE",
+     *   "licenseUrl":       "https://license.lukiplay.com/widevine",
+     *   "licenseHeaders":   { "X-AxDRM-Message": "...", "Authorization": "Bearer ..." },
+     *   "drmMultiSession":  false
      * }
      * ```
      */
@@ -36,7 +41,12 @@ sealed class BridgeMessage {
         val title: String,
         val poster: String?,
         val subtitleUri: String?,
-        val subtitleMimeType: String?
+        val subtitleMimeType: String?,
+        val manifestType: String? = null,
+        val drmScheme: String? = null,
+        val licenseUrl: String? = null,
+        val licenseHeaders: Map<String, String> = emptyMap(),
+        val drmMultiSession: Boolean = false,
     ) : BridgeMessage()
 
     /** Web requests the player to stop / return from PlayerActivity. */
@@ -95,7 +105,18 @@ sealed class BridgeMessage {
                         title            = obj.optString("title", ""),
                         poster           = obj.optString("poster").ifBlank { null },
                         subtitleUri      = obj.optString("subtitleUri").ifBlank { null },
-                        subtitleMimeType = obj.optString("subtitleMimeType").ifBlank { null }
+                        subtitleMimeType = obj.optString("subtitleMimeType").ifBlank { null },
+                        manifestType     = obj.optString("manifestType").ifBlank { null },
+                        drmScheme        = obj.optString("drmScheme").ifBlank { null },
+                        licenseUrl       = obj.optString("licenseUrl").ifBlank { null },
+                        licenseHeaders   = obj.optJSONObject("licenseHeaders")?.let { headers ->
+                            buildMap {
+                                headers.keys().forEach { key ->
+                                    headers.optString(key).takeIf { it.isNotBlank() }?.let { put(key, it) }
+                                }
+                            }
+                        } ?: emptyMap(),
+                        drmMultiSession  = obj.optBoolean("drmMultiSession", false),
                     )
                     "stop_stream"   -> StopStream
                     "login_success" -> LoginSuccess(

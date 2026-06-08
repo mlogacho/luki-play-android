@@ -106,22 +106,6 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
         setupRetryButton()
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        val config: StreamConfig? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(EXTRA_STREAM_CONFIG, StreamConfig::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent.getParcelableExtra(EXTRA_STREAM_CONFIG)
-        }
-        if (config != null && config.url.isNotBlank()) {
-            viewModel.setTitle(config.title)
-            viewModel.setStreamUrl(config.url)
-            playerManager?.load(config)
-        }
-    }
-
     override fun onResume() {
         super.onResume()
         playerManager?.resume()

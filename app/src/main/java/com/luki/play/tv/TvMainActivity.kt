@@ -3,7 +3,6 @@ package com.luki.play.tv
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.webkit.WebChromeClient
@@ -12,10 +11,14 @@ import androidx.appcompat.app.AppCompatActivity
 import com.luki.play.BuildConfig
 import com.luki.play.R
 import com.luki.play.bridge.LukiBridge
+import com.luki.play.data.auth.TokenStore
 import com.luki.play.databinding.ActivityTvMainBinding
 import com.luki.play.util.DeviceUtils
 import com.luki.play.webview.LukiWebViewClient
 import com.luki.play.webview.WebViewConfig
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import timber.log.Timber
 
 /**
  * **TV WebView Activity** for Luki Play (Android TV / Google TV).
@@ -27,6 +30,7 @@ import com.luki.play.webview.WebViewConfig
  *  - Back-key returns to the TV launcher (no double-back toast).
  *  - WebChromeClient is stripped of unnecessary mobile-specific handlers.
  */
+@AndroidEntryPoint
 class TvMainActivity : AppCompatActivity() {
 
     companion object {
@@ -111,6 +115,8 @@ class TvMainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityTvMainBinding
     private val deviceUtils by lazy { DeviceUtils.createImpl(this) }
 
+    @Inject lateinit var tokenStore: TokenStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityTvMainBinding.inflate(layoutInflater)
@@ -120,7 +126,7 @@ class TvMainActivity : AppCompatActivity() {
         setupWebView()
 
         binding.webView.loadUrl(BuildConfig.BASE_URL)
-        Log.d(TAG, "TV — Loading: ${BuildConfig.BASE_URL}")
+        Timber.tag(TAG).d("TV — Loading: ${BuildConfig.BASE_URL}")
     }
 
     // ── WebView setup ─────────────────────────────────────────────────────────
@@ -151,7 +157,7 @@ class TvMainActivity : AppCompatActivity() {
 
         wv.webChromeClient = object : WebChromeClient() {
             override fun onConsoleMessage(msg: android.webkit.ConsoleMessage): Boolean {
-                Log.d("LukiJS-TV", "[${msg.messageLevel()}] ${msg.message()}")
+                Timber.tag("LukiJS-TV").d("[${msg.messageLevel()}] ${msg.message()}")
                 return true
             }
         }
@@ -216,7 +222,7 @@ class TvMainActivity : AppCompatActivity() {
     }
 
     private fun showError(code: Int, description: String) {
-        Log.e(TAG, "TV page error $code: $description")
+        Timber.tag(TAG).e("TV page error $code: $description")
         binding.errorLayout.visibility = View.VISIBLE
         binding.webView.visibility     = View.GONE
 

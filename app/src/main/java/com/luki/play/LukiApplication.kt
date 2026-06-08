@@ -2,42 +2,67 @@
 package com.luki.play
 
 import android.app.Application
-import android.util.Log
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.webkit.WebView
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
+import com.luki.play.data.downloads.LukiDownloadService
+import com.luki.play.tv.recommendations.RecommendationsWorker
+import com.luki.play.util.DeviceUtils
+import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
+import javax.inject.Inject
 
-/**
- * Custom [Application] class for Luki Play.
- *
- * Responsibilities:
- *  - Register this class in AndroidManifest.xml via `android:name=".LukiApplication"`.
- *  - Enable WebView debugging in debug builds.
- *  - Centralise any future SDK/lib initialisation (analytics, crash reporting, etc.)
- *    so that Activities remain thin.
- */
-class LukiApplication : Application() {
+@HiltAndroidApp
+class LukiApplication : Application(), Configuration.Provider {
 
-    companion object {
-        private const val TAG = "LukiApplication"
-    }
+    @Inject lateinit var workerFactory: HiltWorkerFactory
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
 
     override fun onCreate() {
         super.onCreate()
-        Log.d(TAG, "onCreate — Luki Play starting up")
+        initTimber()
         initWebView()
+        initDownloadNotificationChannel()
+        scheduleTvRecommendations()
     }
 
-    // ── Initialisation helpers ────────────────────────────────────────────────
+    private fun scheduleTvRecommendations() {
+        // Solo en dispositivos TV: la API tvprovider sólo aplica allí.
+        if (DeviceUtils.isTv(this)) {
+            RecommendationsWorker.enqueue(this)
+        }
+    }
 
-    /**
-     * Enables WebView remote debugging when running a debug build.
-     *
-     * Connect via Chrome DevTools at chrome://inspect after launching the app
-     * on a device or emulator with USB debugging enabled.
-     */
+    private fun initDownloadNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        val channel = NotificationChannel(
+            LukiDownloadService.NOTIFICATION_CHANNEL_ID,
+            "Descargas",
+            NotificationManager.IMPORTANCE_LOW,
+        ).apply { description = "Progreso de descargas offline" }
+        nm.createNotificationChannel(channel)
+    }
+
+    private fun initTimber() {
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
+        // En release no plantamos ningún árbol → los Timber.* son no-ops.
+        // Cuando se integre Crashlytics, plantar CrashlyticsTree aquí.
+    }
+
     private fun initWebView() {
         if (BuildConfig.DEBUG) {
             WebView.setWebContentsDebuggingEnabled(true)
-            Log.d(TAG, "WebView debugging enabled (debug build)")
+            Timber.d("WebView debugging enabled (debug build)")
         }
     }
 }
