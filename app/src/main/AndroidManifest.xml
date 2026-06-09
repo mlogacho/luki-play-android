@@ -3,9 +3,8 @@
     AndroidManifest.xml — Luki Play Android
     ─────────────────────────────────────────
     applicationId : com.luki.play
-    minSdk        : 21  |  targetSdk : 34
-    BASE_URL      : http://98.80.97.51/home  (debug)
-                    https://play.luki.tv     (release)
+    minSdk        : 23  |  targetSdk : 35
+    BASE_URL      : https://lukiplay.com  (debug y release)
 
     Arquitectura de Activities:
       SplashActivity  →  RouterActivity  →  TvMainActivity   (Android TV)
@@ -96,7 +95,7 @@
         <activity
             android:name=".ui.SplashActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
+            android:screenOrientation="nosensor"
             android:theme="@style/Theme.LukiPlay.Starting"
             android:noHistory="true">
 
@@ -121,7 +120,7 @@
         <activity
             android:name=".ui.RouterActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
+            android:screenOrientation="nosensor"
             android:theme="@style/Theme.LukiPlay.Splash"
             android:noHistory="true" />
 
@@ -153,11 +152,17 @@
              MobileMainActivity — WebView para móvil / tablet
              ──────────────────────────────────────────────────────
              Gestión de doble-back, toast de salida.
+             screenOrientation=fullSensor: permite rotar a horizontal para que
+             el reproductor web (HlsVideoPlayer) entre en pantalla completa al
+             girar el teléfono, como YouTube. El fullscreen del <video> lo
+             gestiona onShowCustomView en el WebChromeClient. configChanges
+             incluye orientation|screenSize → la rotación NO recrea la Activity
+             (el WebView no se recarga).
         -->
         <activity
             android:name=".mobile.MobileMainActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
+            android:screenOrientation="fullSensor"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
             android:theme="@style/Theme.LukiPlay"
             android:windowSoftInputMode="adjustResize"

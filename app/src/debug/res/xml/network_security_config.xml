@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    network_security_config.xml — OVERRIDE SOLO DEBUG
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Este fichero solo se incluye en el build `debug`. Permite cleartext HTTP
+    contra el servidor de desarrollo y los streams de prueba (QA/CI), SIN que
+    esas excepciones lleguen al build de release que se sube a Google Play.
+
+    El config de release vive en src/main/res/xml/network_security_config.xml
+    y prohíbe cleartext por completo.
+-->
+<network-security-config>
+
+    <!-- Política global: cleartext PROHIBIDO por defecto. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Servidor de desarrollo interno — solo HTTP local (dev/QA) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">98.80.97.51</domain>
+    </domain-config>
+
+    <!-- Streams de prueba Mux (HTTP en redirecciones — solo QA/CI) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">test-streams.mux.dev</domain>
+    </domain-config>
+
+    <!-- Producción: lukiplay.com — solo HTTPS, sin excepción -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">lukiplay.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+
+</network-security-config>
