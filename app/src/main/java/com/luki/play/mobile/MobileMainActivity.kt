@@ -5,6 +5,8 @@ import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.os.Bundle
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -30,6 +32,7 @@ import com.luki.play.webview.WebViewConfig
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import timber.log.Timber
+import kotlin.math.abs
 
 /**
  * **Mobile WebView Activity** for Luki Play.
@@ -86,6 +89,19 @@ class MobileMainActivity : AppCompatActivity() {
 
         // Injected after page load. Fixes banner images by forcing object-position
         // and background-position to show the left side (where text/CTAs are).
+        // Puente JS para recibir swipes detectados por el GestureDetector nativo.
+        // Expone window.__lukiNativeSwipe('next'|'prev') que el player web escucha
+        // via window.__lukiSwipeHandler, registrado por el player al montarse.
+        private val SWIPE_BRIDGE_JS = """
+            (function() {
+                window.__lukiNativeSwipe = function(direction) {
+                    if (typeof window.__lukiSwipeHandler === 'function') {
+                        window.__lukiSwipeHandler(direction);
+                    }
+                };
+            })();
+        """.trimIndent()
+
         private val MOBILE_RESPONSIVE_JS = """
             (function() {
                 if (document.getElementById('luki-fix-applied')) return;
@@ -258,6 +274,53 @@ class MobileMainActivity : AppCompatActivity() {
             ),
             LukiBridge.JS_INTERFACE_NAME
         )
+
+        setupSwipeGesture(wv)
+    }
+
+    // ── Swipe nativo para zapping de canales ──────────────────────────────────
+    // El PanResponder de React Native Web pierde la carrera contra el sistema
+    // de gestos del WebView Android. Detectamos el swipe horizontal aquí, en
+    // capa nativa, y lo notificamos al JS vía evaluateJavascript.
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupSwipeGesture(wv: WebView) {
+        val gestureDetector = GestureDetector(this,
+            object : GestureDetector.SimpleOnGestureListener() {
+                private val SWIPE_MIN_DISTANCE = 80   // px mínimos horizontales
+                private val SWIPE_MAX_OFFPATH  = 100  // px máximos verticales
+
+                override fun onFling(
+                    e1: MotionEvent?,
+                    e2: MotionEvent,
+                    velocityX: Float,
+                    velocityY: Float
+                ): Boolean {
+                    val e1 = e1 ?: return false
+                    val dx = e2.x - e1.x
+                    val dy = e2.y - e1.y
+                    if (abs(dy) > SWIPE_MAX_OFFPATH) return false
+                    if (abs(dx) < SWIPE_MIN_DISTANCE) return false
+
+                    val direction = if (dx < 0) "next" else "prev"
+                    Timber.tag(TAG).d("Swipe nativo detectado: $direction (dx=$dx)")
+                    wv.post {
+                        wv.evaluateJavascript(
+                            "window.__lukiNativeSwipe && window.__lukiNativeSwipe('$direction');",
+                            null
+                        )
+                    }
+                    return true
+                }
+            }
+        )
+
+        wv.setOnTouchListener { v, event ->
+            gestureDetector.onTouchEvent(event)
+            // Retornar false para que el WebView también procese el evento
+            // (scroll, tap, etc.) — el GestureDetector solo actúa en fling.
+            v.onTouchEvent(event)
+        }
     }
 
     // ── HTML5 fullscreen del reproductor web ──────────────────────────────────
@@ -370,6 +433,7 @@ class MobileMainActivity : AppCompatActivity() {
 
     private fun injectResponsiveFixes() {
         binding.webView.evaluateJavascript(MOBILE_RESPONSIVE_JS, null)
+        binding.webView.evaluateJavascript(SWIPE_BRIDGE_JS, null)
     }
 
     private fun showProgress(visible: Boolean) {
