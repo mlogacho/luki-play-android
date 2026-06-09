@@ -20,8 +20,8 @@ android {
         applicationId   = "com.luki.play"
         minSdk          = 23
         targetSdk       = 35
-        versionCode     = 4
-        versionName     = "1.0.2"
+        versionCode     = 6
+        versionName     = "1.0.3"
 
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

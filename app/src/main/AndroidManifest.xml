@@ -152,11 +152,17 @@
              MobileMainActivity — WebView para móvil / tablet
              ──────────────────────────────────────────────────────
              Gestión de doble-back, toast de salida.
+             screenOrientation=fullSensor: permite rotar a horizontal para que
+             el reproductor web (HlsVideoPlayer) entre en pantalla completa al
+             girar el teléfono, como YouTube. El fullscreen del <video> lo
+             gestiona onShowCustomView en el WebChromeClient. configChanges
+             incluye orientation|screenSize → la rotación NO recrea la Activity
+             (el WebView no se recarga).
         -->
         <activity
             android:name=".mobile.MobileMainActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
+            android:screenOrientation="fullSensor"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize"
             android:theme="@style/Theme.LukiPlay"
             android:windowSoftInputMode="adjustResize"

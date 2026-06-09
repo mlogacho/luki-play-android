@@ -2,11 +2,17 @@
 package com.luki.play.mobile
 
 import android.annotation.SuppressLint
+import android.content.pm.ActivityInfo
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
+import android.webkit.WebChromeClient.CustomViewCallback
 import android.webkit.WebView
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
@@ -139,6 +145,11 @@ class MobileMainActivity : AppCompatActivity() {
     private var lastBackPressTime = 0L
     private val deviceUtils by lazy { DeviceUtils.createImpl(this) }
 
+    // ── HTML5 fullscreen state (reproductor web a pantalla completa) ──────────
+    private var customView: View? = null
+    private var customViewCallback: CustomViewCallback? = null
+    private var fullscreenContainer: FrameLayout? = null
+
     @Inject lateinit var tokenStore: TokenStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -225,6 +236,18 @@ class MobileMainActivity : AppCompatActivity() {
                 Timber.tag("LukiJS").d("[${message.messageLevel()}] ${message.message()}")
                 return true
             }
+
+            // ── HTML5 fullscreen (requestFullscreen del <video>/reproductor web) ──
+            // Sin estos callbacks, requestFullscreen() desde la web es un no-op en
+            // un WebView. Aquí montamos la custom view a pantalla completa, ocultamos
+            // el WebView y forzamos landscape mientras dura; al salir restauramos.
+            override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+                enterWebFullscreen(view, callback)
+            }
+
+            override fun onHideCustomView() {
+                exitWebFullscreen()
+            }
         }
 
         wv.addJavascriptInterface(
@@ -237,11 +260,93 @@ class MobileMainActivity : AppCompatActivity() {
         )
     }
 
+    // ── HTML5 fullscreen del reproductor web ──────────────────────────────────
+
+    /**
+     * Llamado por [WebChromeClient.onShowCustomView] cuando la web invoca
+     * `requestFullscreen()` (p. ej. al girar el teléfono en el player). Monta la
+     * vista del video a pantalla completa sobre todo el contenido, oculta el
+     * WebView y fuerza orientación horizontal mientras dura.
+     */
+    private fun enterWebFullscreen(view: View, callback: CustomViewCallback) {
+        // Si ya hay una custom view, descártala (contrato de WebChromeClient).
+        if (customView != null) {
+            callback.onCustomViewHidden()
+            return
+        }
+        customView = view
+        customViewCallback = callback
+
+        val decor = window.decorView as ViewGroup
+        fullscreenContainer = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+            addView(
+                view,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+        }
+        decor.addView(
+            fullscreenContainer,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        binding.webView.visibility = View.GONE
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Pantalla completa inmersiva + horizontal mientras dura el video.
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                or View.SYSTEM_UI_FLAG_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            )
+    }
+
+    /** Llamado por [WebChromeClient.onHideCustomView] al salir de fullscreen. */
+    private fun exitWebFullscreen() {
+        val view = customView ?: return
+        val decor = window.decorView as ViewGroup
+        fullscreenContainer?.let {
+            it.removeView(view)
+            decor.removeView(it)
+        }
+        fullscreenContainer = null
+        customView = null
+        customViewCallback?.onCustomViewHidden()
+        customViewCallback = null
+
+        binding.webView.visibility = View.VISIBLE
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Volver al sensor libre: el usuario puede seguir girando, pero al cerrar
+        // el video la app no queda trabada en horizontal.
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+    }
+
     // ── Back-press (double-tap to exit) ───────────────────────────────────────
 
     private fun setupBackPress() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                // Si el reproductor web está en fullscreen, el back primero sale
+                // del fullscreen (no del WebView ni de la app).
+                if (customView != null) {
+                    binding.webView.evaluateJavascript(
+                        "(function(){if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen();})();",
+                        null
+                    )
+                    exitWebFullscreen()
+                    return
+                }
                 if (binding.webView.canGoBack()) {
                     binding.webView.goBack()
                     return
