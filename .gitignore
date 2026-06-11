@@ -29,3 +29,4 @@ captures/
 
 # Gradle daemon JVM config (machine-specific)
 gradle/gradle-daemon-jvm.properties
+FICHA_PLAY_STORE.md

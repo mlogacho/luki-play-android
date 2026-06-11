@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eliminar cuenta — LUKI PLAY</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      /* Paleta de marca LUKI PLAY */
+      --russian-violet: #240046;
+      --rebecca-purple: #60269E;
+      --french-violet: #7303C0;
+      --selective-yellow: #FFB800;
+      --safety-orange: #FF7900;
+      --cosmic-latte: #FAF6E7;
+      --rose-red: #D1105A;
+      --robin-egg: #17D1C6;
+      --african-violet: #B07CC6;
+      --space-cadet: #22244E;
+      --mint-green: #D4FAE8;
+
+      --txt-primary: var(--cosmic-latte);
+      --txt-secondary: rgba(250, 246, 231, 0.66);
+      --txt-muted: rgba(250, 246, 231, 0.42);
+      --surface: rgba(96, 38, 158, 0.14);
+      --surface-border: rgba(176, 124, 198, 0.22);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--txt-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px 72px;
+      background:
+        radial-gradient(circle at top left, rgba(255, 184, 0, 0.10), transparent 32%),
+        radial-gradient(circle at 85% 8%, rgba(115, 3, 192, 0.22), transparent 34%),
+        linear-gradient(180deg, var(--russian-violet) 0%, #14002b 100%);
+      background-attachment: fixed;
+    }
+
+    /* ---------- Logo LUKI PLAY ---------- */
+    .logo {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .logo .luki {
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 2.1rem;
+      letter-spacing: -0.01em;
+      color: #ffffff;
+      position: relative;
+      line-height: 1;
+    }
+    /* punto naranja de la i */
+    .logo .luki .dot {
+      position: absolute;
+      top: -2px;
+      right: 1px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--selective-yellow);
+    }
+    .logo .play {
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--russian-violet);
+      background: var(--selective-yellow);
+      border-radius: 14px;
+      padding: 4px 12px 5px;
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 44px;
+    }
+    header h1 {
+      font-family: 'Sora', sans-serif;
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-top: 18px;
+    }
+    header .brand-line {
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: var(--selective-yellow);
+      margin-top: 8px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+    }
+
+    /* ---------- Cards ---------- */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      max-width: 700px;
+      width: 100%;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(8px);
+    }
+
+    .card h2 {
+      font-family: 'Sora', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .card h2 .icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--selective-yellow) 0%, var(--safety-orange) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Sora', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--russian-violet);
+      flex-shrink: 0;
+    }
+
+    .card p, .card li {
+      font-size: 0.94rem;
+      line-height: 1.7;
+      color: var(--txt-secondary);
+    }
+    .card ul, .card ol { padding-left: 20px; }
+    .card li { margin-bottom: 6px; }
+    .card strong { color: var(--txt-primary); }
+
+    .step-list {
+      counter-reset: steps;
+      list-style: none;
+      padding-left: 0;
+    }
+    .step-list li {
+      counter-increment: steps;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .step-list li::before {
+      content: counter(steps);
+      min-width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(255, 184, 0, 0.12);
+      border: 1px solid var(--selective-yellow);
+      color: var(--selective-yellow);
+      font-size: 0.78rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .email-block {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--selective-yellow) 0%, var(--safety-orange) 100%);
+      border-radius: 10px;
+      padding: 12px 20px;
+      margin-top: 14px;
+      font-size: 1rem;
+      color: var(--russian-violet);
+      font-weight: 800;
+      text-decoration: none;
+      word-break: break-all;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 16px rgba(255, 184, 0, 0.22);
+    }
+    .email-block:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(255, 184, 0, 0.32);
+    }
+
+    /* ---------- Tabla ---------- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+    th {
+      text-align: left;
+      padding: 9px 10px;
+      color: var(--selective-yellow);
+      font-weight: 700;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--surface-border);
+    }
+    td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(176, 124, 198, 0.12);
+      color: var(--txt-secondary);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .badge-delete { background: rgba(209, 16, 90, 0.18); color: #ff6b9d; }
+    .badge-retain { background: rgba(23, 209, 198, 0.16); color: var(--robin-egg); }
+
+    .warning-box {
+      background: linear-gradient(135deg, rgba(209, 16, 90, 0.14), rgba(255, 121, 0, 0.10));
+      border: 1px solid rgba(255, 121, 0, 0.34);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-top: 18px;
+      font-size: 0.9rem;
+      color: #ffc9a3;
+      line-height: 1.65;
+    }
+    .warning-box strong { color: #ffe0c2; }
+
+    footer {
+      margin-top: 44px;
+      font-size: 0.8rem;
+      color: var(--txt-muted);
+      text-align: center;
+      line-height: 1.7;
+    }
+    footer a { color: var(--selective-yellow); text-decoration: none; }
+    footer strong { color: var(--txt-secondary); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <span class="luki">luk<span style="position:relative;">i<span class="dot"></span></span></span>
+      <span class="play">play</span>
+    </div>
+    <h1>Eliminar cuenta en LUKI PLAY</h1>
+    <p class="brand-line">lukiplay.com · soporte@luki.ec</p>
+  </header>
+
+  <!-- Paso 1: cómo solicitar -->
+  <div class="card">
+    <h2><span class="icon">1</span>Cómo solicitar la eliminación</h2>
+    <p>Envía un correo a la dirección de soporte con los datos requeridos. Tu solicitud será procesada en un plazo máximo de <strong>30 días hábiles</strong>.</p>
+
+    <a class="email-block" href="mailto:soporte@luki.ec?subject=Solicitud%20de%20eliminaci%C3%B3n%20de%20cuenta%20%E2%80%94%20LUKI%20PLAY">
+      ✉ soporte@luki.ec
+    </a>
+
+    <br /><br />
+    <p><strong>Asunto sugerido:</strong> <em>Solicitud de eliminación de cuenta — LUKI PLAY</em></p>
+
+    <br />
+    <p><strong>Incluye en el cuerpo del correo:</strong></p>
+    <ol class="step-list" style="margin-top:12px;">
+      <li>Tu número de cédula o contrato registrado en LUKI PLAY</li>
+      <li>El correo electrónico o número de teléfono asociado a la cuenta</li>
+      <li>La frase: <em>"Solicito la eliminación permanente de mi cuenta y datos personales en LUKI PLAY."</em></li>
+    </ol>
+
+    <div class="warning-box">
+      ⚠️ La eliminación de la cuenta es <strong>permanente e irreversible</strong>. No podrás recuperar tu historial, favoritos ni preferencias una vez completado el proceso.
+    </div>
+  </div>
+
+  <!-- Datos que se eliminan / retienen -->
+  <div class="card">
+    <h2><span class="icon">2</span>Qué datos se eliminan y cuáles se conservan</h2>
+    <p>Al eliminar tu cuenta, procesamos tus datos de la siguiente manera:</p>
+    <br />
+    <table>
+      <thead>
+        <tr>
+          <th>Tipo de dato</th>
+          <th>Acción</th>
+          <th>Período de retención</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Datos de cuenta (nombre, cédula/contrato)</td>
+          <td><span class="badge badge-delete">Eliminado</span></td>
+          <td>Inmediato al procesar la solicitud</td>
+        </tr>
+        <tr>
+          <td>Favoritos asociados a tu cuenta</td>
+          <td><span class="badge badge-delete">Eliminado</span></td>
+          <td>Inmediato</td>
+        </tr>
+        <tr>
+          <td>Identificador de dispositivo (UUID generado por la app)</td>
+          <td><span class="badge badge-delete">Eliminado</span></td>
+          <td>Inmediato</td>
+        </tr>
+        <tr>
+          <td>Tokens de sesión (access / refresh token)</td>
+          <td><span class="badge badge-delete">Eliminado</span></td>
+          <td>Inmediato (invalidados en el servidor)</td>
+        </tr>
+        <tr>
+          <td>Datos de facturación / contrato de servicio</td>
+          <td><span class="badge badge-retain">Retenido</span></td>
+          <td>Hasta 7 años por obligaciones legales y fiscales (Ecuador)</td>
+        </tr>
+        <tr>
+          <td>Registros de actividad para auditoría de seguridad</td>
+          <td><span class="badge badge-retain">Retenido</span></td>
+          <td>90 días, anonimizados</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Datos en el dispositivo -->
+  <div class="card">
+    <h2><span class="icon">3</span>Datos almacenados en tu dispositivo</h2>
+    <p>Adicionalmente, te recomendamos limpiar los datos locales de la app en tu teléfono o Smart TV:</p>
+    <ul style="margin-top:12px;">
+      <li><strong>Android (teléfono/tablet):</strong> Ajustes → Aplicaciones → LUKI PLAY → Almacenamiento → <em>Borrar datos</em></li>
+      <li><strong>Android TV / Google TV:</strong> Ajustes → Aplicaciones → Ver todas → LUKI PLAY → <em>Borrar datos</em></li>
+      <li>También puedes desinstalar la app para eliminar todos los datos locales.</li>
+    </ul>
+    <p style="margin-top:12px;">Esto eliminará los tokens de sesión, el PIN de control parental, la caché de canales y el contenido descargado, todos almacenados únicamente en tu dispositivo.</p>
+  </div>
+
+  <footer>
+    <p>LUKI PLAY es un servicio de <strong>Netdigital S.A. (Luki)</strong> · Ecuador</p>
+    <p style="margin-top:6px;">¿Tienes dudas? Escríbenos a <a href="mailto:soporte@luki.ec">soporte@luki.ec</a></p>
+  </footer>
+
+</body>
+</html>

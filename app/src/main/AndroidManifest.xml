@@ -50,6 +50,14 @@
     <!-- Leanback soportado pero no obligatorio (permite instalar en móvil también) -->
     <uses-feature android:name="android.software.leanback"  android:required="false" />
 
+    <!-- ✅ CRÍTICO para Android TV: varias Activities declaran screenOrientation
+         portrait/landscape, lo que hace que Android IMPLIQUE
+         android.hardware.screen.portrait como requerida. Las TV no tienen
+         pantalla portrait → Google las filtra como incompatibles.
+         Declararlas required="false" explícitamente desactiva ese filtro. -->
+    <uses-feature android:name="android.hardware.screen.portrait"  android:required="false" />
+    <uses-feature android:name="android.hardware.screen.landscape" android:required="false" />
+
     <!-- Sensores y hardware opcionales -->
     <uses-feature android:name="android.hardware.camera"           android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
