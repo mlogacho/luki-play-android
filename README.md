@@ -57,8 +57,8 @@ LukiPlay/
 |---|---|
 | Android Gradle Plugin | 8.5.2 |
 | Kotlin | 1.9.25 |
-| compileSdk / targetSdk | 34 |
-| minSdk | 21 |
+| compileSdk / targetSdk | 35 |
+| minSdk | 23 |
 | JVM target | 17 |
 | Media3 (ExoPlayer) | 1.4.1 |
 | AndroidX Lifecycle | 2.8.2 |
@@ -119,8 +119,15 @@ window.LukiNative.logout()
 
 ```bash
 ./gradlew :app:assembleDebug    # debug APK
-./gradlew :app:assembleRelease  # release APK (requiere keystore)
+./gradlew :app:assembleRelease  # release APK (requiere keystore + local.properties)
 ./gradlew :app:installDebug     # instalar en dispositivo conectado
+```
+
+### Credenciales de firma (release)
+Crear `local.properties` en la raíz del proyecto:
+```properties
+KEYSTORE_PASS=<password_keystore>
+KEY_PASS=<password_clave>
 ```
 
 ---
