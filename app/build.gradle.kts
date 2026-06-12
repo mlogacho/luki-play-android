@@ -58,7 +58,11 @@ android {
             buildConfigField("String",  "BASE_URL",     "\"https://lukiplay.com\"")
             buildConfigField("String",  "API_BASE_URL", "\"https://lukiplay.com\"")
             // Feature flags
-            buildConfigField("boolean", "NATIVE_HOME_ENABLED", "true")
+            // Home nativo Compose apagado también en debug: depende de un endpoint
+            // de profiles que el backend aún no implementa (GET /auth/profiles → 404).
+            // Así el build de desarrollo carga el portal web igual que release. Se
+            // reactiva cuando exista el endpoint.
+            buildConfigField("boolean", "NATIVE_HOME_ENABLED", "false")
             buildConfigField("boolean", "OFFLINE_DOWNLOADS_ENABLED", "true")
         }
 
