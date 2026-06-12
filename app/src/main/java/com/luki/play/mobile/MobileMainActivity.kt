@@ -173,13 +173,57 @@ class MobileMainActivity : AppCompatActivity() {
         // Edge-to-edge disabled: the Expo/RN-Web portal manages its own safe-area insets
         // via env(safe-area-inset-*). Enabling it in the native shell caused a rendering
         // offset on the left side of the banner (safe-area-inset-left mismatch in WebView).
-        binding = ActivityMobileMainBinding.inflate(layoutInflater)
+        //
+        // Inflar este layout instancia el <WebView>, lo que obliga al sistema a cargar el
+        // paquete "Android System WebView". En algunos equipos antiguos (varios MIUI/Redmi)
+        // ese paquete viene deshabilitado o a medio actualizar y la instanciación lanza
+        // una excepción (MissingWebViewPackageException / Resources$NotFoundException),
+        // haciendo que la app "se instale pero se cierre al abrir". En vez de crashear,
+        // mostramos una pantalla accionable. En equipos sanos el try pasa de largo y el
+        // comportamiento es idéntico al actual.
+        binding = try {
+            ActivityMobileMainBinding.inflate(layoutInflater)
+        } catch (t: Throwable) {
+            Timber.tag(TAG).e(t, "No se pudo inicializar el WebView del sistema")
+            showWebViewUnavailable()
+            return
+        }
         setContentView(binding.root)
         setupRetry()
         setupWebView()
         setupBackPress()
         binding.webView.loadUrl(mobileLoginUrl())
         Timber.tag(TAG).d("Loading: ${mobileLoginUrl()}")
+    }
+
+    /**
+     * Pantalla de respaldo cuando el WebView del sistema no está disponible
+     * (deshabilitado o a medio actualizar en algunos MIUI/equipos antiguos).
+     * Evita el cierre inmediato y le dice al usuario cómo solucionarlo. No depende
+     * del binding (que es justo lo que falló), se construye en código.
+     */
+    private fun showWebViewUnavailable() {
+        val pad = (24 * resources.displayMetrics.density).toInt()
+        val message = android.widget.TextView(this).apply {
+            text = "No se pudo iniciar el navegador interno.\n\n" +
+                "Actualiza “Android System WebView” y Google Chrome desde " +
+                "Play Store y luego vuelve a abrir Luki Play."
+            setPadding(pad, pad, pad, pad)
+            gravity = android.view.Gravity.CENTER
+            setTextColor(Color.WHITE)
+            textSize = 16f
+        }
+        val root = FrameLayout(this).apply {
+            setBackgroundColor(Color.parseColor("#240046"))
+            addView(
+                message,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+        }
+        setContentView(root)
     }
 
     /**
