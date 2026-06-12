@@ -24,8 +24,9 @@ import timber.log.Timber
  * **TV WebView Activity** for Luki Play (Android TV / Google TV).
  *
  * Key differences from [com.luki.play.mobile.MobileMainActivity]:
- *  - Injects a JS helper that maps D-Pad key events to scroll / focus
- *    commands so the web portal works without a touchscreen.
+ *  - Forwards D-Pad key events to the WebView (onKeyDown → dispatchKeyEvent);
+ *    la navegación la maneja el portal web (useSpatialNavigation), no un helper
+ *    nativo, para evitar dos sistemas de foco compitiendo.
  *  - Hides the system navigation bar (full-screen leanback experience).
  *  - Back-key returns to the TV launcher (no double-back toast).
  *  - WebChromeClient is stripped of unnecessary mobile-specific handlers.
@@ -58,58 +59,6 @@ class TvMainActivity : AppCompatActivity() {
             })();
         """.trimIndent()
 
-        private val DPAD_JS = """
-            (function() {
-              if (window.__lukiDpadInstalled) return;
-              window.__lukiDpadInstalled = true;
-
-              function getFocusables() {
-                return Array.from(document.querySelectorAll(
-                  'input:not([disabled]), button:not([disabled]), a[href], select, textarea, [tabindex="0"]'
-                )).filter(function(el) {
-                  var r = el.getBoundingClientRect();
-                  return r.width > 0 && r.height > 0;
-                });
-              }
-
-              document.addEventListener('keydown', function(e) {
-                var active = document.activeElement;
-                var focusables = getFocusables();
-                var idx = focusables.indexOf(active);
-
-                if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-                  e.preventDefault();
-                  if (idx >= 0 && idx < focusables.length - 1) {
-                    focusables[idx + 1].focus();
-                  } else if (idx < 0 && focusables.length > 0) {
-                    focusables[0].focus();
-                  } else {
-                    window.scrollBy(0, 200);
-                  }
-                } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-                  e.preventDefault();
-                  if (idx > 0) {
-                    focusables[idx - 1].focus();
-                  } else {
-                    window.scrollBy(0, -200);
-                  }
-                } else if (e.key === 'Tab') {
-                  e.preventDefault();
-                  var next = e.shiftKey
-                    ? (idx > 0 ? focusables[idx - 1] : null)
-                    : (idx >= 0 && idx < focusables.length - 1 ? focusables[idx + 1] : null);
-                  if (next) next.focus();
-                  else if (!e.shiftKey && focusables.length > 0) focusables[0].focus();
-                } else if (e.key === 'Enter') {
-                  if (active && active !== document.body && active !== document.documentElement) {
-                    active.click();
-                  } else if (focusables.length > 0) {
-                    focusables[0].focus();
-                  }
-                }
-              }, true);
-            })();
-        """.trimIndent()
     }
 
     private lateinit var binding: ActivityTvMainBinding
@@ -147,7 +96,11 @@ class TvMainActivity : AppCompatActivity() {
             onPageFinished = {
                 showLoading(false)
                 wv.evaluateJavascript(TV_SCALE_JS, null)
-                wv.evaluateJavascript(DPAD_JS, null)
+                // La navegación D-pad la maneja por completo el portal web
+                // (useSpatialNavigation: nav 2D + grafo del player + zapping). Antes
+                // se inyectaba aquí un DPAD_JS lineal que CHOCABA con el web (dos
+                // listeners keydown en captura sobre document) y causaba foco errático.
+                // Se eliminó. Las teclas siguen llegando vía onKeyDown → dispatchKeyEvent.
             },
             onError = { code, desc ->
                 showLoading(false)
