@@ -59,6 +59,31 @@ class TvMainActivity : AppCompatActivity() {
             })();
         """.trimIndent()
 
+        /**
+         * CSS del foco visual en TV: muestra claramente qué elemento tiene el foco
+         * cuando navegas con el D-pad. Marca los elementos con [data-luki-focus]
+         * (atributo que pone useSpatialNavigation en el portal web) con un borde
+         * amarillo + sombra + escala leve, similar a Netflix / YouTube TV.
+         */
+        private val TV_FOCUS_CSS_JS = """
+            (function() {
+              if (window.__lukiTvFocusCssInstalled) return;
+              window.__lukiTvFocusCssInstalled = true;
+
+              var style = document.createElement('style');
+              style.textContent = `
+                [data-luki-focus] {
+                  outline: 3px solid #FFB800 !important;
+                  outline-offset: 4px !important;
+                  transform: scale(1.08) !important;
+                  box-shadow: 0 0 16px rgba(255, 184, 0, 0.5) !important;
+                  transition: outline-color 0.15s, transform 0.15s, box-shadow 0.15s !important;
+                }
+              `;
+              document.head.appendChild(style);
+            })();
+        """.trimIndent()
+
     }
 
     private lateinit var binding: ActivityTvMainBinding
@@ -96,6 +121,7 @@ class TvMainActivity : AppCompatActivity() {
             onPageFinished = {
                 showLoading(false)
                 wv.evaluateJavascript(TV_SCALE_JS, null)
+                wv.evaluateJavascript(TV_FOCUS_CSS_JS, null)
                 // La navegación D-pad la maneja por completo el portal web
                 // (useSpatialNavigation: nav 2D + grafo del player + zapping). Antes
                 // se inyectaba aquí un DPAD_JS lineal que CHOCABA con el web (dos
