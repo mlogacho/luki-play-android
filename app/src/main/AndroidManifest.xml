@@ -15,7 +15,7 @@
       ✅ LEANBACK_LAUNCHER intent-filter (SplashActivity)
       ✅ android.hardware.touchscreen  required="false"
       ✅ android.software.leanback     required="false"
-      ✅ android:banner definido (tv_banner.xml)
+      ✅ android:banner definido (banner_tv.png, 320×180)
       ✅ android:roundIcon definido (mipmap-anydpi-v26)
       ✅ No touchscreen / telephony / GPS required
       ✅ FOREGROUND_SERVICE_MEDIA_PLAYBACK declarado

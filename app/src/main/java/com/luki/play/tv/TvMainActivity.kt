@@ -97,6 +97,11 @@ class TvMainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         hideSystemUi()
+        // TV App Quality: mantener la pantalla encendida — evita que el screensaver /
+        // Ambient Mode de Android TV se active durante la reproducción (el contenido
+        // corre en el WebView, que por sí solo no marca actividad de usuario y dejaría
+        // que la TV atenúe/apague la pantalla a mitad de un programa en vivo).
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setupWebView()
 
         binding.webView.loadUrl(BuildConfig.BASE_URL)
