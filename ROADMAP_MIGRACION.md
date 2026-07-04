@@ -1,5 +1,12 @@
 # Roadmap de Migración — LukiPlay Android → Nativo (híbrido estratégico)
 
+> ✅ **Estado 2026-07-03:** el andamiaje de **todas las fases (F0–F5) ya está en el
+> código.** F0 (hardening) hecho salvo la migración de tokens del bridge JS.
+> F1–F5 implementadas tras `NATIVE_HOME_ENABLED`/`OFFLINE_DOWNLOADS_ENABLED`
+> (hoy la UI nativa está apagada porque espera `GET /auth/profiles` del backend).
+> Este documento se mantiene como **plan de referencia**; el estado real vive en
+> [`README.md`](README.md).
+
 **Documento complementario a:** `AUDITORIA_LUKIPLAY_ANDROID.md`
 **Estrategia:** Migración híbrida estratégica — nativo para Player + Sesión + Catálogo + TV; WebView para contenido editorial.
 **Stack destino:** Kotlin + Jetpack Compose (móvil) + Compose for TV + Media3/ExoPlayer + Widevine + Hilt + Retrofit/OkHttp.

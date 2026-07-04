@@ -48,24 +48,29 @@ Cada agente actualiza esta tabla tras generar archivos.
 
 ## Decisiones técnicas (append only)
 
-| Parámetro | Valor |
-|---|---|
-| AGP | 8.5.2 |
-| Kotlin | 1.9.25 |
-| Media3 BOM | 1.4.1 |
-| compileSdk / targetSdk | 34 |
-| minSdk | 21 |
-| JVM target | 17 |
-| BASE_URL | `http://98.80.97.51/home` |
-| ABI splits | arm64-v8a, x86_64 |
-| R8 / Minify | release=true |
-| ViewBinding | true |
-| BuildConfig | true |
-| JS Bridge name | `window.LukiNative` |
-| DRM Widevine | NO — `drmToken` nullable reservado para v2 |
-| MainActivity rol | Router puro (no layout, no setContentView) |
-| MobileMainActivity | WebView + LukiWebViewClient + LukiBridge + double-back |
-| TvMainActivity | WebView + D-Pad JS helper + fullscreen + key forwarding |
+> **Nota (2026-07-03):** esta tabla registraba el andamiaje inicial (v1). Los valores
+> vigentes están abajo; los originales se conservan tachados como bitácora histórica.
+
+| Parámetro | Valor vigente (2026-07-03) | Valor original (v1) |
+|---|---|---|
+| AGP | **9.2.1** | ~~8.5.2~~ |
+| Kotlin | **2.2.10** (KSP 2.2.10-2.0.2) | ~~1.9.25~~ |
+| Media3 BOM | 1.4.1 | 1.4.1 |
+| compileSdk / targetSdk | **35 / 35** | ~~34~~ |
+| minSdk | **23** | ~~21~~ |
+| versionCode / Name | **13 / 1.0.10** | ~~3 / 1.0.2~~ |
+| JVM target | 17 | 17 |
+| BASE_URL | **`https://lukiplay.com/home`** | ~~`http://98.80.97.51/home`~~ |
+| ABI filters | armeabi-v7a, arm64-v8a, x86, x86_64 (splits off) | ~~arm64-v8a, x86_64~~ |
+| R8 / Minify | release=true | true |
+| ViewBinding / BuildConfig / Compose | true / true / **true** | true / true / — |
+| JS Bridge name | `window.LukiNative` | `window.LukiNative` |
+| DRM Widevine | **Cableado** (`WidevineProvider`, se activa con `drmScheme`+`licenseUrl`) | ~~NO — reservado para v2~~ |
+| DI | **Hilt 2.57.1** | ~~ninguno~~ |
+| HTTP | **Retrofit/OkHttp/Moshi** (+ auth interceptor + refresh) | ~~HttpURLConnection manual~~ |
+| MainActivity rol | legacy/fallback; el router real es `RouterActivity` | Router puro |
+| MobileMainActivity | WebView + LukiWebViewClient + LukiBridge + double-back | igual |
+| TvMainActivity | WebView + nav espacial web (DPAD_JS eliminado) + KEEP_SCREEN_ON | ~~D-Pad JS helper~~ |
 
 ## Bloqueos / preguntas para Marco
 

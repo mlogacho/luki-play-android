@@ -1,7 +1,14 @@
 # TV_QUALITY_REPORT.md — Luki Play Android TV
 
+> ⚠️ **DOCUMENTO HISTÓRICO (v1).** Algunas afirmaciones ya no son ciertas: el
+> **D-Pad ya NO usa un JS helper inyectado** (se eliminó en el commit `d8e5c74`; la
+> navegación la maneja la nav espacial de la web) y la **política de red se endureció**
+> (release prohíbe todo cleartext; las excepciones `98.80.97.51` / Mux viven solo en
+> el override de debug). El checklist vigente es
+> [`CHECKLIST_ANDROID_TV.md`](CHECKLIST_ANDROID_TV.md).
+
 > Informe de calidad para Android TV / Google TV  
-> Agente: qa-validator | Fecha: 2024-05
+> Agente: qa-validator | Fecha: 2024-05 *(histórico)*
 
 ---
 

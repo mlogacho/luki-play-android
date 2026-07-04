@@ -1,10 +1,20 @@
 # Auditoría Técnica — LukiPlay Android
 
+> ⚠️ **DOCUMENTO HISTÓRICO — baseline del 2026-05-29.** Refleja el estado *previo*
+> a la migración. **Gran parte de sus hallazgos ya están resueltos** en el código
+> actual (v13 / 1.0.10): existe DI (Hilt), Retrofit + refresh, Compose y Compose
+> for TV, Cast, Room, descargas, perfiles, control parental, QoS y **Widevine
+> cableado**; hay 10 archivos de test. Los hallazgos aún vigentes son:
+> tokens del **bridge JS** en `SharedPreferences` en claro (la capa nativa ya
+> cifra) y el hecho de que la UI nativa espera un flag (`NATIVE_HOME_ENABLED`) que
+> depende de un endpoint de backend pendiente. Para el estado real ver
+> [`README.md`](README.md) y [`CHECKLIST_ANDROID_TV.md`](CHECKLIST_ANDROID_TV.md).
+
 **Cliente:** LukiPlay (OTT)
 **Auditor:** Arquitectura Senior OTT — perspectiva Netflix / Disney+ / HBO Max
-**Fecha:** 2026-05-29
+**Fecha:** 2026-05-29 *(baseline; ver nota de estado arriba)*
 **Alcance:** App Android (móvil + Android TV), módulo `tv-activation`
-**Stack revisado:** Kotlin 2.2.10, AGP 9.2.1, minSdk 21 / targetSdk 35, Media3 1.4.1
+**Stack revisado (a la fecha):** Kotlin 1.9.25, AGP 8.5.2, minSdk 21 / targetSdk 35, Media3 1.4.1
 
 ---
 

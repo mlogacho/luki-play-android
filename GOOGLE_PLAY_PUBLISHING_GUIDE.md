@@ -33,8 +33,8 @@ Google requiere credenciales para revisar el flujo de streaming.
 
 Asegúrate de marcar lo siguiente:
 - **Navegación:** Seleccionar "La aplicación es completamente navegable mediante un control remoto (D-Pad)."
-- **Banner de TV:** El sistema usará el banner definido en el código (`@drawable/tv_banner`). ✅ Verificado: el `AndroidManifest.xml` declara `android:banner="@drawable/tv_banner"`.
-- **Capturas de Pantalla:** Subir al menos 4 imágenes en resolución **1920x1080** (pueden ser capturas del emulador).
+- **Banner de TV:** El sistema usará el banner definido en el código (`@drawable/banner_tv`, PNG 320×180). ✅ Verificado: el `AndroidManifest.xml` declara `android:banner="@drawable/banner_tv"`.
+- **Capturas de Pantalla:** Subir al menos 1 (recomendado 4+) imágenes en resolución **1920x1080** (pueden ser capturas del emulador).
 
 ---
 
@@ -48,13 +48,17 @@ Debe incluir estos puntos en la web de destino:
 
 ---
 
-## 5. Especificaciones Técnicas (v1.0.2)
-- **VersionCode:** 3 ✅ (`app/build.gradle.kts`)
-- **VersionName:** 1.0.2 ✅
+## 5. Especificaciones Técnicas (v1.0.10)
+- **VersionCode:** 13 ✅ (`app/build.gradle.kts`)
+- **VersionName:** 1.0.10 ✅
 - **Target SDK:** 35 ✅
 - **Min SDK:** 23 (elevado desde 21 por requisito de `androidx.security:security-crypto`; sigue cubriendo Android TV)
 - **ABIs compatibles:** armeabi-v7a, arm64-v8a, x86, x86_64. ✅
+- **Símbolos de depuración nativos:** `debugSymbolLevel = "FULL"` → el AAB incluye los `.so` símbolos para simbolizar crashes/ANR en Play Console. ✅
 - **Formato de subida:** `.aab` (Android App Bundle).
+
+> ℹ️ Recordá **subir el versionCode más alto ya publicado**: revisá en Play Console
+> el último code en producción antes de generar el bundle (este repo va por `13`).
 
 ---
 
