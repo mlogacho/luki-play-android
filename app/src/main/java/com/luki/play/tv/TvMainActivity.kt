@@ -150,6 +150,7 @@ class TvMainActivity : AppCompatActivity() {
             LukiBridge(
                 context     = applicationContext,
                 deviceUtils = deviceUtils,
+                tokenStore  = tokenStore,
                 onLogout    = { clearSession() }
             ),
             LukiBridge.JS_INTERFACE_NAME

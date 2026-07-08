@@ -21,11 +21,20 @@ object SecureStorage {
     private const val ENCRYPTED_PREFS_NAME = "luki_secure_prefs"
     private const val LEGACY_PREFS_NAME    = Constants.PREFS_NAME
 
+    @Volatile private var cached: SharedPreferences? = null
+
     /**
-     * Retorna la instancia de [SharedPreferences] cifrada.
+     * Retorna la instancia de [SharedPreferences] cifrada, memoizada: crearla
+     * implica IPC al Keystore + descifrado de keysets, y la creación concurrente
+     * desde varios hilos (bridge JS, OkHttp, main) puede corromper el keyset.
      * La primera llamada crea el almacén si no existe y ejecuta la migración.
      */
-    fun prefs(context: Context): SharedPreferences {
+    fun prefs(context: Context): SharedPreferences =
+        cached ?: synchronized(this) {
+            cached ?: create(context.applicationContext).also { cached = it }
+        }
+
+    private fun create(context: Context): SharedPreferences {
         val masterKey = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build()
@@ -44,42 +53,43 @@ object SecureStorage {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    /** Claves que nunca deben permanecer en el fichero plano legacy. */
+    private val SENSITIVE_KEYS = listOf(
+        Constants.KEY_ACCESS_TOKEN,
+        Constants.KEY_REFRESH_TOKEN,
+        Constants.KEY_USER_ID,
+        Constants.KEY_DISPLAY_NAME,
+    )
+
     /**
-     * Si las prefs legacy contienen algún token, los mueve al almacén cifrado
-     * y luego elimina las entradas sensibles del fichero plano.
-     * Se ejecuta una sola vez gracias a que borra el flag de migración al terminar.
+     * Si las prefs legacy contienen tokens, los copia al almacén cifrado
+     * (solo cuando este aún no tiene refresh token, para no pisar una sesión
+     * más nueva) y siempre elimina las entradas sensibles del fichero plano:
+     * no deben quedar en claro aunque la copia se haya saltado.
      */
     private fun migrateLegacyPrefsIfNeeded(
         context: Context,
         encrypted: SharedPreferences
     ) {
         val legacy = context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
-
-        // Si el almacén cifrado ya tiene tokens, la migración ya fue hecha
-        if (encrypted.contains(Constants.KEY_REFRESH_TOKEN)) return
+        if (SENSITIVE_KEYS.none { legacy.contains(it) }) return
 
         val legacyRefresh = legacy.getString(Constants.KEY_REFRESH_TOKEN, null)
-        if (legacyRefresh.isNullOrBlank()) return
-
-        Timber.i("SecureStorage: migrando tokens legacy → EncryptedSharedPreferences")
-
-        encrypted.edit().apply {
-            copyString(legacy, this, Constants.KEY_ACCESS_TOKEN)
-            copyString(legacy, this, Constants.KEY_REFRESH_TOKEN)
-            copyString(legacy, this, Constants.KEY_USER_ID)
-            copyString(legacy, this, Constants.KEY_DISPLAY_NAME)
-            apply()
+        if (!encrypted.contains(Constants.KEY_REFRESH_TOKEN) && !legacyRefresh.isNullOrBlank()) {
+            Timber.i("SecureStorage: migrando tokens legacy → EncryptedSharedPreferences")
+            encrypted.edit().apply {
+                SENSITIVE_KEYS.forEach { copyString(legacy, this, it) }
+                apply()
+            }
         }
 
         // Borra solo las claves sensibles; deja el resto de legacy intacto
-        legacy.edit()
-            .remove(Constants.KEY_ACCESS_TOKEN)
-            .remove(Constants.KEY_REFRESH_TOKEN)
-            .remove(Constants.KEY_USER_ID)
-            .remove(Constants.KEY_DISPLAY_NAME)
-            .apply()
+        legacy.edit().apply {
+            SENSITIVE_KEYS.forEach { remove(it) }
+            apply()
+        }
 
-        Timber.i("SecureStorage: migración completada, prefs legacy limpiadas")
+        Timber.i("SecureStorage: prefs legacy limpiadas")
     }
 
     private fun copyString(

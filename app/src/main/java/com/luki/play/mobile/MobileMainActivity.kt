@@ -314,6 +314,7 @@ class MobileMainActivity : AppCompatActivity() {
             LukiBridge(
                 context     = applicationContext,
                 deviceUtils = deviceUtils,
+                tokenStore  = tokenStore,
                 onLogout    = { clearWebViewSession() }
             ),
             LukiBridge.JS_INTERFACE_NAME

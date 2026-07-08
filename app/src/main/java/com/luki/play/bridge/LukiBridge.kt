@@ -3,9 +3,12 @@ package com.luki.play.bridge
 
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.webkit.JavascriptInterface
+import com.luki.play.data.auth.TokenStore
 import com.luki.play.player.PlayerActivity
 import com.luki.play.player.StreamConfig
 import com.luki.play.util.Constants
@@ -25,12 +28,17 @@ import org.json.JSONObject
  *                      leaks (MainActivity passes applicationContext).
  * @param deviceUtils   Platform-specific device helper injected by
  *                      MainActivity; decoupled via [DeviceUtilsContract].
+ * @param tokenStore    Shared session store (SecureTokenStore over
+ *                      EncryptedSharedPreferences) — single source of truth
+ *                      for tokens across the web bridge and the native stack.
  * @param onLogout      Lambda called when the web signals user logout, so
- *                      MainActivity can clear WebView state.
+ *                      MainActivity can clear WebView state. Always invoked
+ *                      on the main thread.
  */
 class LukiBridge(
     private val context: Context,
     private val deviceUtils: DeviceUtilsContract,
+    private val tokenStore: TokenStore,
     private val onLogout: () -> Unit
 ) {
 
@@ -125,30 +133,25 @@ class LukiBridge(
         Log.i(TAG, "onLoginSuccess()")
         try {
             val obj = JSONObject(jsonPayload)
-            val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
-            prefs.edit().apply {
-                obj.optString("accessToken").ifBlank { null }?.let {
-                    putString(Constants.KEY_ACCESS_TOKEN, it)
-                }
-                obj.optString("refreshToken").ifBlank { null }?.let {
-                    putString(Constants.KEY_REFRESH_TOKEN, it)
-                }
-                obj.optString("userId").ifBlank { null }?.let {
-                    putString(Constants.KEY_USER_ID, it)
-                }
-                obj.optString("displayName").ifBlank { null }?.let {
-                    putString(Constants.KEY_DISPLAY_NAME, it)
-                }
-                apply()
+            val accessToken = obj.optString("accessToken").ifBlank { null }
+            if (accessToken == null) {
+                Log.w(TAG, "onLoginSuccess: payload sin accessToken, ignorado")
+                return
             }
+            tokenStore.save(
+                accessToken  = accessToken,
+                refreshToken = obj.optString("refreshToken").ifBlank { null },
+                userId       = obj.optString("userId").ifBlank { null },
+                displayName  = obj.optString("displayName").ifBlank { null }
+            )
             Log.i(TAG, "Token persisted for user: ${obj.optString("userId")}")
         } catch (e: Exception) {
-            Log.e(TAG, "onLoginSuccess: error parsing payload", e)
+            Log.e(TAG, "onLoginSuccess: error persisting session", e)
         }
     }
 
     /**
-     * Devuelve la sesión persistida en SharedPreferences como JSON, para que
+     * Devuelve la sesión persistida en el almacén seguro como JSON, para que
      * la web pueda hidratar su authStore al arrancar y evitar volver a pedir
      * el escaneo del QR tras cerrar/abrir la app.
      *
@@ -161,16 +164,20 @@ class LukiBridge(
      * Returns `"{}"` si no hay sesión.
      */
     @JavascriptInterface
-    fun getStoredSession(): String {
-        val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
-        val refresh = prefs.getString(Constants.KEY_REFRESH_TOKEN, null)
-        if (refresh.isNullOrBlank()) return "{}"
-        return JSONObject().apply {
-            put("accessToken",  prefs.getString(Constants.KEY_ACCESS_TOKEN, "") ?: "")
+    fun getStoredSession(): String = try {
+        val refresh = tokenStore.refreshToken()
+        if (refresh.isNullOrBlank()) "{}"
+        else JSONObject().apply {
+            put("accessToken",  tokenStore.accessToken() ?: "")
             put("refreshToken", refresh)
-            put("userId",       prefs.getString(Constants.KEY_USER_ID, "") ?: "")
-            put("displayName",  prefs.getString(Constants.KEY_DISPLAY_NAME, "") ?: "")
+            put("userId",       tokenStore.userId() ?: "")
+            put("displayName",  tokenStore.displayName() ?: "")
         }.toString()
+    } catch (e: Exception) {
+        // El almacén cifrado puede fallar (Keystore corrupto/invalidado); un
+        // throw aquí mataría el proceso desde el hilo del bridge JS.
+        Log.e(TAG, "getStoredSession: fallo leyendo el almacén seguro", e)
+        "{}"
     }
 
     /**
@@ -182,13 +189,11 @@ class LukiBridge(
     @JavascriptInterface
     fun clearStoredSession() {
         Log.i(TAG, "clearStoredSession()")
-        val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
-            .remove(Constants.KEY_ACCESS_TOKEN)
-            .remove(Constants.KEY_REFRESH_TOKEN)
-            .remove(Constants.KEY_USER_ID)
-            .remove(Constants.KEY_DISPLAY_NAME)
-            .apply()
+        try {
+            tokenStore.clear()
+        } catch (e: Exception) {
+            Log.e(TAG, "clearStoredSession: fallo limpiando el almacén seguro", e)
+        }
     }
 
     /**
@@ -201,7 +206,9 @@ class LukiBridge(
     fun logout() {
         Log.i(TAG, "logout()")
         clearStoredSession()
-        onLogout()
+        // onLogout toca el WebView (clearCache/loadUrl), que solo admite el
+        // hilo principal; este método llega en el hilo del bridge JS.
+        Handler(Looper.getMainLooper()).post { onLogout() }
     }
 
     // ------------------------------------------------------------------ //

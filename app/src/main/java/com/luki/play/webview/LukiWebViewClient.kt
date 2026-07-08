@@ -2,6 +2,7 @@
 package com.luki.play.webview
 
 import android.graphics.Bitmap
+import android.net.Uri
 import android.net.http.SslError
 import android.webkit.SslErrorHandler
 import android.webkit.WebResourceError
@@ -10,6 +11,8 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.annotation.MainThread
+import com.luki.play.BuildConfig
+import com.luki.play.util.Constants
 import timber.log.Timber
 
 /**
@@ -17,7 +20,7 @@ import timber.log.Timber
  *
  * Responsibilities:
  *  - Intercept page start / finish events to drive a loading indicator.
- *  - Handle SSL errors gracefully (proceed only for our trusted IP).
+ *  - Handle SSL errors gracefully (always cancel — never proceed).
  *  - Route errors to a native offline/retry screen rather than blank WebView.
  *  - Block navigation to external domains outside the Luki backend.
  *
@@ -35,8 +38,12 @@ class LukiWebViewClient(
     companion object {
         private const val TAG = "LukiWebViewClient"
 
-        /** IP address of the Luki backend — only domain where cleartext is allowed. */
-        private const val LUKI_HOST = "98.80.97.51"
+        /**
+         * Host of the Luki portal, derived from [BuildConfig.BASE_URL] so the
+         * navigation allowlist always matches the URL each build actually loads.
+         */
+        private val LUKI_HOST: String =
+            Uri.parse(BuildConfig.BASE_URL).host ?: Constants.SERVER_HOST
     }
 
     // ── Page lifecycle ────────────────────────────────────────────────────────
@@ -94,9 +101,10 @@ class LukiWebViewClient(
     }
 
     /**
-     * Handle SSL errors. Because our server uses plain HTTP, this should not
-     * be triggered in normal operation. If it is (e.g. captive portal HTTPS
-     * redirect), we log it and cancel to avoid security leaks.
+     * Handle SSL errors. The portal is served over HTTPS with a valid
+     * certificate, so this should not trigger in normal operation. If it does
+     * (e.g. captive portal interception), we log it and cancel to avoid
+     * security leaks.
      *
      * NOTE: Do NOT call handler.proceed() for arbitrary SSL errors in production.
      */
