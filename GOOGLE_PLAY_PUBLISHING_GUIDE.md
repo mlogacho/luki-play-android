@@ -48,9 +48,9 @@ Debe incluir estos puntos en la web de destino:
 
 ---
 
-## 5. Especificaciones Técnicas (v1.0.10)
-- **VersionCode:** 13 ✅ (`app/build.gradle.kts`)
-- **VersionName:** 1.0.10 ✅
+## 5. Especificaciones Técnicas (v1.0.11)
+- **VersionCode:** 14 ✅ (`app/build.gradle.kts`)
+- **VersionName:** 1.0.11 ✅
 - **Target SDK:** 35 ✅
 - **Min SDK:** 23 (elevado desde 21 por requisito de `androidx.security:security-crypto`; sigue cubriendo Android TV)
 - **ABIs compatibles:** armeabi-v7a, arm64-v8a, x86, x86_64. ✅

@@ -8,7 +8,7 @@
 >
 > Compatible con **Android móvil/tablet** (minSdk 23) y **Android TV / Google TV** (Leanback).
 
-**Estado actual:** `versionCode 13` · `versionName 1.0.10` · última revisión de doc: **2026-07-03**.
+**Estado actual:** `versionCode 14` · `versionName 1.0.11` · última revisión de doc: **2026-07-07**.
 
 ---
 

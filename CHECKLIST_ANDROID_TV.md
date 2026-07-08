@@ -2,7 +2,8 @@
 
 > Estado auditado el **2026-06-15** contra el código real. El fix de `KEEP_SCREEN_ON`
 > ya está **committeado en el repo como v13 / 1.0.10** (commits `f386367` + `cdfb9b5`);
-> **pendiente: confirmar la subida de ese AAB v13 a Play Console** (la v12 no incluye el fix).
+> **pendiente: subir a Play Console un AAB con ese fix — usar el actual v14 / 1.0.11**
+> (la v12 no incluye el fix).
 > Leyenda: ✅ cumple (verificado) · ⚠️ cumple parcial / acción pendiente · ❌ no cumple · 🔍 requiere prueba manual
 
 ---
@@ -64,7 +65,7 @@
 3. ~~`FLAG_KEEP_SCREEN_ON` en TvMainActivity~~ → **hecho** (en árbol de trabajo; entra en el rebuild a v13).
 
 ### Pendientes
-4. **Subir el AAB v13 / 1.0.10 a Play Console** (ya bumpeado en el repo con el fix de `KEEP_SCREEN_ON`, commit `cdfb9b5`) y enviarlo como la versión a revisar para TV (la v12 en Console no incluye ese fix).
+4. **Subir el AAB v14 / 1.0.11 a Play Console** (incluye el fix de `KEEP_SCREEN_ON` de v13 y el cifrado de sesión del bridge JS) y enviarlo como la versión a revisar para TV (la v12 en Console no incluye esos fixes).
 5. **Play Console: activar el formato Android TV** (Formatos del dispositivo → Android TV → "Agregar") + subir **≥1 captura 1920×1080** y enviar a revisión de TV. Sin esto la tienda no ofrece la app a TVs aunque el AAB sea elegible.
 6. Retirar/ajustar el hack `zoom=0.82` (`TV_SCALE_JS`) y **validar legibilidad 10-foot en TV/emulador real** (cambiarlo a ciegas puede descuadrar la nav y el layout).
 7. Prueba manual solo-D-pad: login → home → player → zapping → back (foco visible, sin callejones).

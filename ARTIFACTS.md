@@ -58,7 +58,7 @@ Cada agente actualiza esta tabla tras generar archivos.
 | Media3 BOM | 1.4.1 | 1.4.1 |
 | compileSdk / targetSdk | **35 / 35** | ~~34~~ |
 | minSdk | **23** | ~~21~~ |
-| versionCode / Name | **13 / 1.0.10** | ~~3 / 1.0.2~~ |
+| versionCode / Name | **14 / 1.0.11** | ~~3 / 1.0.2~~ |
 | JVM target | 17 | 17 |
 | BASE_URL | **`https://lukiplay.com/home`** | ~~`http://98.80.97.51/home`~~ |
 | ABI filters | armeabi-v7a, arm64-v8a, x86, x86_64 (splits off) | ~~arm64-v8a, x86_64~~ |

@@ -2,11 +2,11 @@
 
 > ⚠️ **DOCUMENTO HISTÓRICO — baseline del 2026-05-29.** Refleja el estado *previo*
 > a la migración. **Gran parte de sus hallazgos ya están resueltos** en el código
-> actual (v13 / 1.0.10): existe DI (Hilt), Retrofit + refresh, Compose y Compose
+> actual (v14 / 1.0.11): existe DI (Hilt), Retrofit + refresh, Compose y Compose
 > for TV, Cast, Room, descargas, perfiles, control parental, QoS y **Widevine
-> cableado**; hay 10 archivos de test. Los hallazgos aún vigentes son:
-> tokens del **bridge JS** en `SharedPreferences` en claro (la capa nativa ya
-> cifra) y el hecho de que la UI nativa espera un flag (`NATIVE_HOME_ENABLED`) que
+> cableado**; hay 10 archivos de test. Los tokens del **bridge JS** ya se guardan
+> cifrados desde v14 (TokenStore + migración de las prefs en claro). El hallazgo
+> aún vigente es que la UI nativa espera un flag (`NATIVE_HOME_ENABLED`) que
 > depende de un endpoint de backend pendiente. Para el estado real ver
 > [`README.md`](README.md) y [`CHECKLIST_ANDROID_TV.md`](CHECKLIST_ANDROID_TV.md).
 
