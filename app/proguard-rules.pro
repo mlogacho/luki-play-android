@@ -15,3 +15,8 @@
 # Configuración por defecto
 -keepattributes *Annotation*
 -keepattributes JavascriptInterface
+
+# Firebase Crashlytics referencia android.os.ProfilingTrigger (API 36) que no
+# existe en compileSdk 35; solo lo usa en runtime si la API está disponible.
+-dontwarn android.os.ProfilingTrigger
+-dontwarn android.os.ProfilingTrigger$Builder

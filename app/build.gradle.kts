@@ -11,6 +11,14 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+// Crashlytics solo se activa si existe google-services.json (descargado de la
+// consola de Firebase). Sin el archivo, el build sigue funcionando y los
+// Timber.* de release son no-ops — así el repo compila en cualquier máquina.
+if (file("google-services.json").exists()) {
+    apply(plugin = libs.plugins.google.services.get().pluginId)
+    apply(plugin = libs.plugins.firebase.crashlytics.get().pluginId)
+}
+
 
 android {
     namespace = "com.luki.play"
@@ -120,6 +128,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.security.crypto)
     implementation(libs.timber)
+
+    // ── Firebase Crashlytics (telemetría de crashes) ─────────────────────────
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.crashlytics)
 
     // ── Hilt (DI) ────────────────────────────────────────────────────────────
     implementation(libs.hilt.android)

@@ -8,8 +8,10 @@ import android.os.Build
 import android.webkit.WebView
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.google.firebase.FirebaseApp
 import com.luki.play.data.downloads.LukiDownloadService
 import com.luki.play.tv.recommendations.RecommendationsWorker
+import com.luki.play.util.CrashlyticsTree
 import com.luki.play.util.DeviceUtils
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -54,9 +56,16 @@ class LukiApplication : Application(), Configuration.Provider {
     private fun initTimber() {
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
+            return
         }
-        // En release no plantamos ningún árbol → los Timber.* son no-ops.
-        // Cuando se integre Crashlytics, plantar CrashlyticsTree aquí.
+        // Release: WARN/ERROR van a Crashlytics como breadcrumbs/non-fatals.
+        // Firebase solo se inicializa si el build incluyó google-services.json;
+        // si no, no plantamos nada y los Timber.* siguen siendo no-ops.
+        runCatching {
+            if (FirebaseApp.getApps(this).isNotEmpty()) {
+                Timber.plant(CrashlyticsTree())
+            }
+        }
     }
 
     private fun initWebView() {
