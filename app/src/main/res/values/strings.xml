@@ -7,6 +7,11 @@
     <string name="error_server">Error del servidor</string>
     <string name="error_server_detail">Ocurrió un problema. Inténtalo más tarde.</string>
     <string name="error_player">Ocurrió un error al reproducir el contenido.</string>
+    <string name="error_webview_missing">No se pudo iniciar el navegador interno.\n\nActualiza «Android System WebView» y Google Chrome desde Play Store y luego vuelve a abrir Luki Play.</string>
+    <string name="error_webview_outdated">El navegador interno del sistema (WebView %1$s) es demasiado antiguo para Luki Play.\n\nActualiza «Android System WebView» desde Play Store y vuelve a abrir la aplicación.</string>
+    <string name="error_blank_title">No se pudo mostrar el contenido</string>
+    <string name="error_blank_detail">Suele resolverse actualizando «Android System WebView» desde Play Store. Versión actual del WebView: %1$s.</string>
+    <string name="btn_open_play_store">Abrir Play Store</string>
 
     <!-- ── Acciones ───────────────────────────────────────────────────────── -->
     <string name="retry">Reintentar</string>

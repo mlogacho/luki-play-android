@@ -14,8 +14,10 @@ import com.luki.play.bridge.LukiBridge
 import com.luki.play.data.auth.TokenStore
 import com.luki.play.databinding.ActivityTvMainBinding
 import com.luki.play.util.DeviceUtils
+import com.luki.play.webview.BlankPageWatchdog
 import com.luki.play.webview.LukiWebViewClient
 import com.luki.play.webview.WebViewConfig
+import com.luki.play.webview.WebViewSupport
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import timber.log.Timber
@@ -88,13 +90,36 @@ class TvMainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTvMainBinding
     private val deviceUtils by lazy { DeviceUtils.createImpl(this) }
+    private var watchdog: BlankPageWatchdog? = null
 
     @Inject lateinit var tokenStore: TokenStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityTvMainBinding.inflate(layoutInflater)
+        // Inflar este layout instancia el <WebView>. En TVs baratas el paquete
+        // "Android System WebView" puede estar ausente, deshabilitado o a medio
+        // actualizar y la instanciación lanza (la app "se instala pero se
+        // cierra al abrir"). Mismo tratamiento que MobileMainActivity: pantalla
+        // accionable en vez de crash.
+        binding = try {
+            ActivityTvMainBinding.inflate(layoutInflater)
+        } catch (t: Throwable) {
+            Timber.tag(TAG).e(t, "No se pudo inicializar el WebView del sistema")
+            WebViewSupport.showFallbackScreen(this, getString(R.string.error_webview_missing))
+            return
+        }
         setContentView(binding.root)
+
+        // El portal exige Chromium >= 85 para parsear su bundle; en motores más
+        // viejos la página queda negra sin error. Avisar antes de cargar.
+        if (WebViewSupport.isOutdated(this)) {
+            val version = WebViewSupport.versionName(this) ?: "?"
+            Timber.tag(TAG).w("WebView demasiado antiguo para el portal: %s", version)
+            WebViewSupport.showFallbackScreen(
+                this, getString(R.string.error_webview_outdated, version)
+            )
+            return
+        }
 
         hideSystemUi()
         // TV App Quality: mantener la pantalla encendida — evita que el screensaver /
@@ -121,10 +146,16 @@ class TvMainActivity : AppCompatActivity() {
         wv.settings.loadWithOverviewMode = true
         wv.settings.useWideViewPort      = true
 
+        watchdog = BlankPageWatchdog(wv) { showBlankPageError() }
+
         wv.webViewClient = LukiWebViewClient(
-            onPageStarted  = { showLoading(true) },
+            onPageStarted  = {
+                watchdog?.cancel()
+                showLoading(true)
+            },
             onPageFinished = {
                 showLoading(false)
+                watchdog?.onPageFinished()
                 wv.evaluateJavascript(TV_SCALE_JS, null)
                 wv.evaluateJavascript(TV_FOCUS_CSS_JS, null)
                 // La navegación D-pad la maneja por completo el portal web
@@ -134,6 +165,7 @@ class TvMainActivity : AppCompatActivity() {
                 // Se eliminó. Las teclas siguen llegando vía onKeyDown → dispatchKeyEvent.
             },
             onError = { code, desc ->
+                watchdog?.cancel()
                 showLoading(false)
                 showError(code, desc)
             }
@@ -169,6 +201,7 @@ class TvMainActivity : AppCompatActivity() {
      * injected JavaScript can handle navigation.
      */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (!::binding.isInitialized) return super.onKeyDown(keyCode, event)
         val wv = binding.webView
         return when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP,
@@ -208,6 +241,22 @@ class TvMainActivity : AppCompatActivity() {
 
     private fun showError(code: Int, description: String) {
         Timber.tag(TAG).e("TV page error $code: $description")
+        showErrorOverlay()
+    }
+
+    /**
+     * Página que cargó pero no montó contenido (JS del portal muerto — motor
+     * WebView viejo o bundle roto). Mensaje accionable en vez de fondo negro.
+     */
+    private fun showBlankPageError() {
+        val version = WebViewSupport.versionName(this) ?: "?"
+        Timber.tag(TAG).e("Página en blanco tras cargar — WebView %s", version)
+        binding.tvErrorMsg.text = getString(R.string.error_blank_title) + "\n\n" +
+            getString(R.string.error_blank_detail, version)
+        showErrorOverlay()
+    }
+
+    private fun showErrorOverlay() {
         binding.errorLayout.visibility = View.VISIBLE
         binding.webView.visibility     = View.GONE
 
@@ -216,6 +265,7 @@ class TvMainActivity : AppCompatActivity() {
             binding.webView.visibility     = View.VISIBLE
             binding.webView.reload()
         }
+        binding.btnRetry.requestFocus()
     }
 
     private fun clearSession() {
@@ -227,19 +277,26 @@ class TvMainActivity : AppCompatActivity() {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
+    // Si el inflate del WebView falló, binding nunca se inicializó y los
+    // callbacks de ciclo de vida no deben tocarlo (crashearían igual).
+
     override fun onResume() {
         super.onResume()
+        if (!::binding.isInitialized) return
         binding.webView.onResume()
         hideSystemUi()
     }
 
     override fun onPause() {
         super.onPause()
+        if (!::binding.isInitialized) return
         binding.webView.onPause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        watchdog?.cancel()
+        if (!::binding.isInitialized) return
         binding.webView.destroy()
     }
 }

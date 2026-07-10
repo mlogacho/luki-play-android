@@ -27,8 +27,10 @@ import com.luki.play.bridge.LukiBridge
 import com.luki.play.data.auth.TokenStore
 import com.luki.play.databinding.ActivityMobileMainBinding
 import com.luki.play.util.DeviceUtils
+import com.luki.play.webview.BlankPageWatchdog
 import com.luki.play.webview.LukiWebViewClient
 import com.luki.play.webview.WebViewConfig
+import com.luki.play.webview.WebViewSupport
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import timber.log.Timber
@@ -160,6 +162,7 @@ class MobileMainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMobileMainBinding
     private var lastBackPressTime = 0L
     private val deviceUtils by lazy { DeviceUtils.createImpl(this) }
+    private var watchdog: BlankPageWatchdog? = null
 
     // ── HTML5 fullscreen state (reproductor web a pantalla completa) ──────────
     private var customView: View? = null
@@ -185,45 +188,27 @@ class MobileMainActivity : AppCompatActivity() {
             ActivityMobileMainBinding.inflate(layoutInflater)
         } catch (t: Throwable) {
             Timber.tag(TAG).e(t, "No se pudo inicializar el WebView del sistema")
-            showWebViewUnavailable()
+            WebViewSupport.showFallbackScreen(this, getString(R.string.error_webview_missing))
             return
         }
         setContentView(binding.root)
+
+        // El portal exige Chromium >= 85 para parsear su bundle; en motores más
+        // viejos la página queda en blanco sin error. Avisar antes de cargar.
+        if (WebViewSupport.isOutdated(this)) {
+            val version = WebViewSupport.versionName(this) ?: "?"
+            Timber.tag(TAG).w("WebView demasiado antiguo para el portal: %s", version)
+            WebViewSupport.showFallbackScreen(
+                this, getString(R.string.error_webview_outdated, version)
+            )
+            return
+        }
+
         setupRetry()
         setupWebView()
         setupBackPress()
         binding.webView.loadUrl(mobileLoginUrl())
         Timber.tag(TAG).d("Loading: ${mobileLoginUrl()}")
-    }
-
-    /**
-     * Pantalla de respaldo cuando el WebView del sistema no está disponible
-     * (deshabilitado o a medio actualizar en algunos MIUI/equipos antiguos).
-     * Evita el cierre inmediato y le dice al usuario cómo solucionarlo. No depende
-     * del binding (que es justo lo que falló), se construye en código.
-     */
-    private fun showWebViewUnavailable() {
-        val pad = (24 * resources.displayMetrics.density).toInt()
-        val message = android.widget.TextView(this).apply {
-            text = "No se pudo iniciar el navegador interno.\n\n" +
-                "Actualiza “Android System WebView” y Google Chrome desde " +
-                "Play Store y luego vuelve a abrir Luki Play."
-            setPadding(pad, pad, pad, pad)
-            gravity = android.view.Gravity.CENTER
-            setTextColor(Color.WHITE)
-            textSize = 16f
-        }
-        val root = FrameLayout(this).apply {
-            setBackgroundColor(Color.parseColor("#240046"))
-            addView(
-                message,
-                FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            )
-        }
-        setContentView(root)
     }
 
     /**
@@ -270,17 +255,22 @@ class MobileMainActivity : AppCompatActivity() {
         WebViewConfig.apply(wv)
         WebViewConfig.enableThirdPartyCookies(wv)
 
+        watchdog = BlankPageWatchdog(wv) { showBlankPageError() }
+
         wv.webViewClient = LukiWebViewClient(
             onPageStarted  = {
+                watchdog?.cancel()
                 showProgress(true)
                 // Inject viewport ASAP so the page renders at device width from the start
                 binding.webView.evaluateJavascript(EARLY_VIEWPORT_JS, null)
             },
             onPageFinished = {
                 showProgress(false)
+                watchdog?.onPageFinished()
                 injectResponsiveFixes()
             },
             onError        = { code, desc ->
+                watchdog?.cancel()
                 showProgress(false)
                 showError(code, desc)
             }
@@ -498,6 +488,19 @@ class MobileMainActivity : AppCompatActivity() {
         binding.webView.visibility = View.GONE
     }
 
+    /**
+     * Página que cargó pero no montó contenido (JS del portal muerto — motor
+     * WebView viejo o bundle roto). Mensaje accionable en vez de fondo vacío.
+     */
+    private fun showBlankPageError() {
+        val version = WebViewSupport.versionName(this) ?: "?"
+        Timber.tag(TAG).e("Página en blanco tras cargar — WebView %s", version)
+        binding.tvErrorMsg.text = getString(R.string.error_blank_title)
+        binding.tvErrorDetail.text = getString(R.string.error_blank_detail, version)
+        binding.errorLayout.visibility = View.VISIBLE
+        binding.webView.visibility = View.GONE
+    }
+
     // ── Session management ────────────────────────────────────────────────────
 
     private fun clearWebViewSession() {
@@ -510,18 +513,25 @@ class MobileMainActivity : AppCompatActivity() {
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
+    // Si el inflate del WebView falló, binding nunca se inicializó y los
+    // callbacks de ciclo de vida no deben tocarlo (crashearían igual).
+
     override fun onResume() {
         super.onResume()
+        if (!::binding.isInitialized) return
         binding.webView.onResume()
     }
 
     override fun onPause() {
         super.onPause()
+        if (!::binding.isInitialized) return
         binding.webView.onPause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        watchdog?.cancel()
+        if (!::binding.isInitialized) return
         binding.webView.destroy()
     }
 }
