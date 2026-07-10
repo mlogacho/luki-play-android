@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1036825811787",
+    "project_id": "lukiplay-cfb07",
+    "storage_bucket": "lukiplay-cfb07.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1036825811787:android:c3ca176fa7e748e9c4e6ce",
+        "android_client_info": {
+          "package_name": "com.luki.play"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLycWdQk9qsKtqdS5VASmAgv8AKnT0r7M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1036825811787:android:c3ca176fa7e748e9c4e6ce",
+        "android_client_info": {
+          "package_name": "com.luki.play.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLycWdQk9qsKtqdS5VASmAgv8AKnT0r7M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
