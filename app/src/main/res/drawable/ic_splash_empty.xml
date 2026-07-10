@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Icono "vacío" del splash (windowSplashScreenAnimatedIcon).
+
+    IMPORTANTE: VectorDrawable exige al menos un <path>. En Android ≤ 11 la
+    librería splashscreen infla este icono manualmente y un vector sin paths
+    lanza XmlPullParserException "no path defined" → la app crashea al abrir
+    (en Android 12+ no se infla y por eso allí no fallaba). El path
+    transparente mantiene el splash sin icono visible.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
-    android:viewportHeight="108" />
+    android:viewportHeight="108">
+    <path
+        android:pathData="M0,0h108v108H0z"
+        android:fillColor="#00000000" />
+</vector>
