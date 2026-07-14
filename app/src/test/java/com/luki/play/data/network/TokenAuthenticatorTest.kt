@@ -9,6 +9,7 @@ import com.luki.play.data.auth.api.IdLoginRequest
 import com.luki.play.data.auth.api.RefreshRequest
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
@@ -16,6 +17,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
+import retrofit2.HttpException
+import java.io.IOException
 import javax.inject.Provider
 
 class TokenAuthenticatorTest {
@@ -97,11 +100,11 @@ class TokenAuthenticatorTest {
     }
 
     @Test
-    fun `refresh failure clears session`() {
+    fun `refresh rejected by server clears session`() {
         server.enqueue(MockResponse().setResponseCode(401))
 
         val store = FakeTokenStore(initialAccess = "tok", initialRefresh = "ref")
-        val api = RefreshingAuthApi(refreshException = RuntimeException("invalid_grant"))
+        val api = RefreshingAuthApi(refreshException = httpException(401))
         val authenticator = TokenAuthenticator(store, Provider { api })
 
         val client = OkHttpClient.Builder()
@@ -118,6 +121,57 @@ class TokenAuthenticatorTest {
         assertNull(store.refreshToken())
         assertEquals(1, store.clearCount)
     }
+
+    @Test
+    fun `refresh network failure keeps session`() {
+        server.enqueue(MockResponse().setResponseCode(401))
+
+        val store = FakeTokenStore(initialAccess = "tok", initialRefresh = "ref")
+        val api = RefreshingAuthApi(refreshException = IOException("sin conexión"))
+        val authenticator = TokenAuthenticator(store, Provider { api })
+
+        val client = OkHttpClient.Builder()
+            .addInterceptor(AuthInterceptor(store))
+            .authenticator(authenticator)
+            .build()
+
+        val response = client.newCall(
+            Request.Builder().url(server.url("/secret")).build()
+        ).execute()
+
+        // El 401 pasa al caller, pero la sesión sigue intacta para reintentar
+        assertEquals(401, response.code)
+        response.close()
+        assertEquals("tok", store.accessToken())
+        assertEquals("ref", store.refreshToken())
+        assertEquals(0, store.clearCount)
+    }
+
+    @Test
+    fun `refresh server error keeps session`() {
+        server.enqueue(MockResponse().setResponseCode(401))
+
+        val store = FakeTokenStore(initialAccess = "tok", initialRefresh = "ref")
+        val api = RefreshingAuthApi(refreshException = httpException(503))
+        val authenticator = TokenAuthenticator(store, Provider { api })
+
+        val client = OkHttpClient.Builder()
+            .addInterceptor(AuthInterceptor(store))
+            .authenticator(authenticator)
+            .build()
+
+        val response = client.newCall(
+            Request.Builder().url(server.url("/secret")).build()
+        ).execute()
+        response.close()
+
+        assertEquals("tok", store.accessToken())
+        assertEquals("ref", store.refreshToken())
+        assertEquals(0, store.clearCount)
+    }
+
+    private fun httpException(code: Int): HttpException =
+        HttpException(retrofit2.Response.error<Any>(code, "".toResponseBody()))
 }
 
 private class RefreshingAuthApi(
