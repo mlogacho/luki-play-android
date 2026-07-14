@@ -140,7 +140,6 @@ class TvMainActivity : AppCompatActivity() {
         val wv = binding.webView
 
         WebViewConfig.apply(wv)
-        WebViewConfig.enableThirdPartyCookies(wv)
 
         // En TV, respetar el viewport que inyectamos vía JS
         wv.settings.loadWithOverviewMode = true

@@ -2,7 +2,6 @@
 package com.luki.play.webview
 
 import android.annotation.SuppressLint
-import android.os.Build
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -61,14 +60,12 @@ object WebViewConfig {
 
         // ── Mixed content (HTTP inside HTTPS) ────────────────────────────────
         // En debug: ALWAYS_ALLOW para que el servidor de desarrollo (98.80.97.51)
-        // funcione sin fricciones. En release: COMPATIBILITY_MODE que permite
-        // recursos pasivos (imágenes, audio) pero bloquea activos (scripts, XHR).
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            settings.mixedContentMode = if (BuildConfig.DEBUG) {
-                WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            } else {
-                WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            }
+        // funcione sin fricciones. En release: NEVER_ALLOW — el portal se sirve
+        // íntegro por HTTPS y la network security config ya prohíbe cleartext.
+        settings.mixedContentMode = if (BuildConfig.DEBUG) {
+            WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        } else {
+            WebSettings.MIXED_CONTENT_NEVER_ALLOW
         }
 
         // ── User-Agent ───────────────────────────────────────────────────────
@@ -83,16 +80,9 @@ object WebViewConfig {
     }
 
     private fun configureCookies() {
+        // Solo cookies first-party: el portal es un único dominio (lukiplay.com)
+        // y nada requiere cookies de terceros.
         CookieManager.getInstance().setAcceptCookie(true)
-        // Per-instance third-party cookies are enabled via enableThirdPartyCookies()
-        // called from each Activity after WebViewConfig.apply() returns.
-    }
-
-    /** Enable third-party cookies for [webView] (must be called per-instance). */
-    fun enableThirdPartyCookies(webView: WebView) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)
-        }
     }
 
     private fun appVersionName(webView: WebView): String = try {

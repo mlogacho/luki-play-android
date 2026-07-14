@@ -3,17 +3,19 @@ package com.luki.play.bridge
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.util.Log
 import android.webkit.JavascriptInterface
+import com.luki.play.BuildConfig
 import com.luki.play.data.auth.TokenStore
 import com.luki.play.player.PlayerActivity
 import com.luki.play.player.StreamConfig
 import com.luki.play.util.Constants
 import com.luki.play.util.DeviceUtilsContract
 import org.json.JSONObject
+import timber.log.Timber
 
 /**
  * JavascriptInterface exposed to the web layer as `window.LukiNative`.
@@ -70,7 +72,8 @@ class LukiBridge(
      */
     @JavascriptInterface
     fun playStream(jsonConfig: String) {
-        Log.d(TAG, "playStream() → $jsonConfig")
+        // No loguear el payload: puede contener licenseHeaders con credenciales.
+        Timber.tag(TAG).d("playStream()")
         val msg = BridgeMessage.from(jsonConfig)
         if (msg !is BridgeMessage.PlayStream) {
             // Fallback: tratar el string como URL plana
@@ -78,7 +81,7 @@ class LukiBridge(
             if (fallbackUrl.startsWith("http")) {
                 launchPlayer(StreamConfig(url = fallbackUrl))
             } else {
-                Log.w(TAG, "playStream: payload no reconocido, ignorado")
+                Timber.tag(TAG).w("playStream: payload no reconocido, ignorado")
             }
             return
         }
@@ -101,7 +104,7 @@ class LukiBridge(
      */
     @JavascriptInterface
     fun stopStream() {
-        Log.d(TAG, "stopStream()")
+        Timber.tag(TAG).d("stopStream()")
         // PlayerActivity finishes itself; broadcast is simpler than keeping a reference.
         val intent = Intent(PlayerActivity.ACTION_STOP_PLAYBACK)
             .setPackage(context.packageName)
@@ -130,12 +133,12 @@ class LukiBridge(
      */
     @JavascriptInterface
     fun onLoginSuccess(jsonPayload: String) {
-        Log.i(TAG, "onLoginSuccess()")
+        Timber.tag(TAG).i("onLoginSuccess()")
         try {
             val obj = JSONObject(jsonPayload)
             val accessToken = obj.optString("accessToken").ifBlank { null }
             if (accessToken == null) {
-                Log.w(TAG, "onLoginSuccess: payload sin accessToken, ignorado")
+                Timber.tag(TAG).w("onLoginSuccess: payload sin accessToken, ignorado")
                 return
             }
             tokenStore.save(
@@ -144,9 +147,9 @@ class LukiBridge(
                 userId       = obj.optString("userId").ifBlank { null },
                 displayName  = obj.optString("displayName").ifBlank { null }
             )
-            Log.i(TAG, "Token persisted for user: ${obj.optString("userId")}")
+            Timber.tag(TAG).i("onLoginSuccess: sesión persistida")
         } catch (e: Exception) {
-            Log.e(TAG, "onLoginSuccess: error persisting session", e)
+            Timber.tag(TAG).e(e, "onLoginSuccess: error persistiendo la sesión")
         }
     }
 
@@ -176,7 +179,7 @@ class LukiBridge(
     } catch (e: Exception) {
         // El almacén cifrado puede fallar (Keystore corrupto/invalidado); un
         // throw aquí mataría el proceso desde el hilo del bridge JS.
-        Log.e(TAG, "getStoredSession: fallo leyendo el almacén seguro", e)
+        Timber.tag(TAG).e(e, "getStoredSession: fallo leyendo el almacén seguro")
         "{}"
     }
 
@@ -188,11 +191,11 @@ class LukiBridge(
      */
     @JavascriptInterface
     fun clearStoredSession() {
-        Log.i(TAG, "clearStoredSession()")
+        Timber.tag(TAG).i("clearStoredSession()")
         try {
             tokenStore.clear()
         } catch (e: Exception) {
-            Log.e(TAG, "clearStoredSession: fallo limpiando el almacén seguro", e)
+            Timber.tag(TAG).e(e, "clearStoredSession: fallo limpiando el almacén seguro")
         }
     }
 
@@ -204,7 +207,7 @@ class LukiBridge(
      */
     @JavascriptInterface
     fun logout() {
-        Log.i(TAG, "logout()")
+        Timber.tag(TAG).i("logout()")
         clearStoredSession()
         // onLogout toca el WebView (clearCache/loadUrl), que solo admite el
         // hilo principal; este método llega en el hilo del bridge JS.
@@ -260,7 +263,7 @@ class LukiBridge(
      */
     @JavascriptInterface
     fun enterPip() {
-        Log.d(TAG, "enterPip()")
+        Timber.tag(TAG).d("enterPip()")
         deviceUtils.enterPip()
     }
 
@@ -277,7 +280,7 @@ class LukiBridge(
      */
     @JavascriptInterface
     fun dispatch(json: String) {
-        Log.d(TAG, "dispatch() → $json")
+        // No loguear el payload: login_success incluye tokens de sesión.
         when (val msg = BridgeMessage.from(json)) {
             is BridgeMessage.PlayStream   -> launchPlayer(StreamConfig(msg.url, msg.title, msg.poster))
             is BridgeMessage.StopStream   -> stopStream()
@@ -285,7 +288,7 @@ class LukiBridge(
             is BridgeMessage.Logout       -> logout()
             is BridgeMessage.EnterPip     -> enterPip()
             is BridgeMessage.GetDeviceInfo -> { /* synchronous — caller should use getDeviceInfo() */ }
-            null -> Log.w(TAG, "dispatch: unknown message type, ignored")
+            null -> Timber.tag(TAG).w("dispatch: unknown message type, ignored")
         }
     }
 
@@ -294,8 +297,26 @@ class LukiBridge(
     // ------------------------------------------------------------------ //
 
     private fun launchPlayer(config: StreamConfig) {
+        if (!isAllowedStreamUrl(config.url)) {
+            Timber.tag(TAG).w(
+                "launchPlayer: URL de stream rechazada (esquema '%s' no permitido)",
+                Uri.parse(config.url).scheme ?: "?"
+            )
+            return
+        }
         val intent = PlayerActivity.newIntent(context, config)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
+    }
+
+    /**
+     * Solo se reproducen streams `https`. En debug se admite también `http`
+     * (servidor de dev y streams de prueba); en release la network security
+     * config bloquearía el cleartext de todos modos — rechazarlo aquí deja un
+     * log claro en vez de un fallo opaco del player.
+     */
+    private fun isAllowedStreamUrl(url: String): Boolean {
+        val scheme = Uri.parse(url).scheme?.lowercase() ?: return false
+        return scheme == "https" || (BuildConfig.DEBUG && scheme == "http")
     }
 }

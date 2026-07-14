@@ -253,7 +253,6 @@ class MobileMainActivity : AppCompatActivity() {
         val wv = binding.webView
         wv.setBackgroundColor(android.graphics.Color.parseColor("#240046"))
         WebViewConfig.apply(wv)
-        WebViewConfig.enableThirdPartyCookies(wv)
 
         watchdog = BlankPageWatchdog(wv) { showBlankPageError() }
 

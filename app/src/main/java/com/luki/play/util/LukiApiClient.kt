@@ -173,7 +173,8 @@ object LukiApiClient {
             }
             val stream = if (conn.responseCode in 200..299) conn.inputStream else conn.errorStream
             val response = stream?.bufferedReader()?.readText()
-            Timber.tag(TAG).d("POST %s -> %d: %s", path, conn.responseCode, response)
+            // No loguear el body: las respuestas de /auth/* incluyen tokens.
+            Timber.tag(TAG).d("POST %s -> %d", path, conn.responseCode)
             if (conn.responseCode in 200..299) response else null
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "POST %s failed", path)
