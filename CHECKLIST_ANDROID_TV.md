@@ -1,9 +1,11 @@
 # ✅ Checklist Android TV — Luki Play
 
-> Estado auditado el **2026-06-15** contra el código real. El fix de `KEEP_SCREEN_ON`
-> ya está **committeado en el repo como v13 / 1.0.10** (commits `f386367` + `cdfb9b5`);
-> **pendiente: subir a Play Console un AAB con ese fix — usar el actual v14 / 1.0.11**
-> (la v12 no incluye el fix).
+> Estado auditado el **2026-06-15** contra el código real.
+> **Actualización 2026-07-14:** la **v15 / 1.0.12** ya está **publicada en Play
+> (2026-07-10)** e incluye todos los fixes que esta cabecera daba por pendientes
+> (`KEEP_SCREEN_ON`, cifrado de sesión del bridge) más Crashlytics y el fix del
+> crash de arranque en Android ≤ 11. La acción #4 quedó cumplida; siguen vigentes
+> las #5–8 (formato TV en Console, hack `zoom=0.82`, prueba D-pad, check 16 KB).
 > Leyenda: ✅ cumple (verificado) · ⚠️ cumple parcial / acción pendiente · ❌ no cumple · 🔍 requiere prueba manual
 
 ---
@@ -65,7 +67,7 @@
 3. ~~`FLAG_KEEP_SCREEN_ON` en TvMainActivity~~ → **hecho** (en árbol de trabajo; entra en el rebuild a v13).
 
 ### Pendientes
-4. **Subir el AAB v14 / 1.0.11 a Play Console** (incluye el fix de `KEEP_SCREEN_ON` de v13 y el cifrado de sesión del bridge JS) y enviarlo como la versión a revisar para TV (la v12 en Console no incluye esos fixes).
+4. ~~Subir el AAB con los fixes a Play Console~~ → **hecho**: v15 / 1.0.12 publicada el 2026-07-10 (incluye `KEEP_SCREEN_ON`, cifrado de sesión del bridge, Crashlytics y fix de arranque Android ≤ 11).
 5. **Play Console: activar el formato Android TV** (Formatos del dispositivo → Android TV → "Agregar") + subir **≥1 captura 1920×1080** y enviar a revisión de TV. Sin esto la tienda no ofrece la app a TVs aunque el AAB sea elegible.
 6. Retirar/ajustar el hack `zoom=0.82` (`TV_SCALE_JS`) y **validar legibilidad 10-foot en TV/emulador real** (cambiarlo a ciegas puede descuadrar la nav y el layout).
 7. Prueba manual solo-D-pad: login → home → player → zapping → back (foco visible, sin callejones).

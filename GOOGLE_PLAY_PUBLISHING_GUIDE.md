@@ -48,17 +48,18 @@ Debe incluir estos puntos en la web de destino:
 
 ---
 
-## 5. Especificaciones Técnicas (v1.0.11)
-- **VersionCode:** 14 ✅ (`app/build.gradle.kts`)
-- **VersionName:** 1.0.11 ✅
+## 5. Especificaciones Técnicas (v1.0.12)
+- **VersionCode:** 15 ✅ (`app/build.gradle.kts`)
+- **VersionName:** 1.0.12 ✅ (publicada en producción el 2026-07-10)
 - **Target SDK:** 35 ✅
 - **Min SDK:** 23 (elevado desde 21 por requisito de `androidx.security:security-crypto`; sigue cubriendo Android TV)
 - **ABIs compatibles:** armeabi-v7a, arm64-v8a, x86, x86_64. ✅
 - **Símbolos de depuración nativos:** `debugSymbolLevel = "FULL"` → el AAB incluye los `.so` símbolos para simbolizar crashes/ANR en Play Console. ✅
 - **Formato de subida:** `.aab` (Android App Bundle).
 
-> ℹ️ Recordá **subir el versionCode más alto ya publicado**: revisá en Play Console
-> el último code en producción antes de generar el bundle (este repo va por `13`).
+> ℹ️ Recordá **subir un versionCode mayor al último ya publicado**: revisá en Play
+> Console el último code en producción antes de generar el bundle (el repo va por
+> `15` = 1.0.12, publicada el 2026-07-10; el próximo bundle debe ser ≥ 16).
 
 ---
 

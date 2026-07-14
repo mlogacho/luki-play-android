@@ -2,7 +2,7 @@
 
 > ⚠️ **DOCUMENTO HISTÓRICO — baseline del 2026-05-29.** Refleja el estado *previo*
 > a la migración. **Gran parte de sus hallazgos ya están resueltos** en el código
-> actual (v14 / 1.0.11): existe DI (Hilt), Retrofit + refresh, Compose y Compose
+> actual (v15 / 1.0.12): existe DI (Hilt), Retrofit + refresh, Compose y Compose
 > for TV, Cast, Room, descargas, perfiles, control parental, QoS y **Widevine
 > cableado**; hay 10 archivos de test. Los tokens del **bridge JS** ya se guardan
 > cifrados desde v14 (TokenStore + migración de las prefs en claro). El hallazgo

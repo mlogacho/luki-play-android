@@ -1,5 +1,11 @@
 # Checklist de Calidad y Validación (QA Validator)
 
+> ⚠️ **DOCUMENTO HISTÓRICO — andamiaje v1 (2026-06-11).** Describe el flujo inicial
+> (`Splash → MainActivity`, dashboard HTTP) y la config de red previa al
+> endurecimiento; ambos cambiaron (hoy: `Splash → RouterActivity → Mobile/TvMainActivity`
+> y cleartext prohibido en release). El estado real vive en [`README.md`](README.md);
+> el checklist vigente de TV es [`CHECKLIST_ANDROID_TV.md`](CHECKLIST_ANDROID_TV.md).
+
 ## Criterios de "Hecho"
 
 - [x] **Arquitectura y Estructura:** Todos los scripts de gradle y librerías BOM se definen de acuerdo a lo planteado.

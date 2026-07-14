@@ -1,11 +1,15 @@
 # Roadmap de Migración — LukiPlay Android → Nativo (híbrido estratégico)
 
-> ✅ **Estado 2026-07-03:** el andamiaje de **todas las fases (F0–F5) ya está en el
-> código.** F0 (hardening) hecho salvo la migración de tokens del bridge JS.
+> ✅ **Estado 2026-07-14:** el andamiaje de **todas las fases (F0–F5) ya está en el
+> código.** F0 (hardening) **completado**: la migración de tokens del bridge JS a
+> `TokenStore` cifrado entró en v14 (commit `8625911`), y el endurecimiento del
+> WebView (mixed content `NEVER_ALLOW` en release, sin cookies de terceros,
+> validación `https` en `playStream`) se sumó después.
 > F1–F5 implementadas tras `NATIVE_HOME_ENABLED`/`OFFLINE_DOWNLOADS_ENABLED`
 > (hoy la UI nativa está apagada porque espera `GET /auth/profiles` del backend).
 > Este documento se mantiene como **plan de referencia**; el estado real vive en
-> [`README.md`](README.md).
+> [`README.md`](README.md) y el plan ejecutable por sprints en
+> [`PLAN_MIGRACION_NATIVA_MOVIL.md`](PLAN_MIGRACION_NATIVA_MOVIL.md).
 
 **Documento complementario a:** `AUDITORIA_LUKIPLAY_ANDROID.md`
 **Estrategia:** Migración híbrida estratégica — nativo para Player + Sesión + Catálogo + TV; WebView para contenido editorial.

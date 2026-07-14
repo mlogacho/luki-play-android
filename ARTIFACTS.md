@@ -51,14 +51,14 @@ Cada agente actualiza esta tabla tras generar archivos.
 > **Nota (2026-07-03):** esta tabla registraba el andamiaje inicial (v1). Los valores
 > vigentes están abajo; los originales se conservan tachados como bitácora histórica.
 
-| Parámetro | Valor vigente (2026-07-03) | Valor original (v1) |
+| Parámetro | Valor vigente (2026-07-14) | Valor original (v1) |
 |---|---|---|
 | AGP | **9.2.1** | ~~8.5.2~~ |
 | Kotlin | **2.2.10** (KSP 2.2.10-2.0.2) | ~~1.9.25~~ |
 | Media3 BOM | 1.4.1 | 1.4.1 |
 | compileSdk / targetSdk | **35 / 35** | ~~34~~ |
 | minSdk | **23** | ~~21~~ |
-| versionCode / Name | **14 / 1.0.11** | ~~3 / 1.0.2~~ |
+| versionCode / Name | **15 / 1.0.12** (publicada 2026-07-10) | ~~3 / 1.0.2~~ |
 | JVM target | 17 | 17 |
 | BASE_URL | **`https://lukiplay.com/home`** | ~~`http://98.80.97.51/home`~~ |
 | ABI filters | armeabi-v7a, arm64-v8a, x86, x86_64 (splits off) | ~~arm64-v8a, x86_64~~ |

@@ -8,7 +8,7 @@
 >
 > Compatible con **Android móvil/tablet** (minSdk 23) y **Android TV / Google TV** (Leanback).
 
-**Estado actual:** `versionCode 14` · `versionName 1.0.11` · última revisión de doc: **2026-07-07**.
+**Estado actual:** `versionCode 15` · `versionName 1.0.12` (publicada en Play el 2026-07-10, incluye Crashlytics y el fix del crash de arranque en Android ≤ 11) · última revisión de doc: **2026-07-14**.
 
 ---
 
@@ -52,6 +52,7 @@ código y se enciende cuando el backend exponga los endpoints que necesita (ver
 | WorkManager | 2.9.1 |
 | AndroidX Lifecycle | 2.8.6 |
 | AndroidX WebKit | 1.11.0 |
+| Firebase BOM (Crashlytics) | 34.16.0 |
 
 > Todas las versiones se gestionan en [`gradle/libs.versions.toml`](gradle/libs.versions.toml).
 
@@ -71,10 +72,12 @@ código y se enciende cuando el backend exponga los endpoints que necesita (ver
 | Android TV nativo | ✅ tras flag | `tv/compose/` (Compose for TV) + canal de recomendaciones (`tv/recommendations/`) |
 | Multiperfil | ✅ | `data/profiles/`, `feature/profiles/` |
 | Control parental (PIN) | ✅ | `data/parental/`, `feature/parental/` |
-| Auth nativa | ✅ | Retrofit + `AuthInterceptor` + `TokenAuthenticator` (refresh), tokens en `EncryptedSharedPreferences` |
+| Auth nativa | ✅ | Retrofit + `AuthInterceptor` + `TokenAuthenticator` (refresh), tokens en `EncryptedSharedPreferences`. La sesión solo se destruye si el servidor rechaza el refresh (400/401/403); fallos transitorios la conservan |
 | Caché de catálogo | ✅ | Room (`data/catalog/db/`) |
+| Crashlytics | ✅ | Firebase Crashlytics activo desde 1.0.12 (`CrashlyticsTree` reenvía WARN/ERROR de Timber como breadcrumbs). Se activa solo si existe `app/google-services.json` |
+| Blindaje de arranque | ✅ | `webview/WebViewSupport` (detecta WebView ausente/viejo, mín. Chromium 80) + `BlankPageWatchdog` (página muda) → pantalla de error nativa en vez de crash/negro |
 
-**~6.500 líneas Kotlin en `app/src/main`.** El WebView sigue siendo el *source of
+**~6.900 líneas Kotlin en `app/src/main`.** El WebView sigue siendo el *source of
 truth* de la UI mientras `NATIVE_HOME_ENABLED=false`.
 
 ---
@@ -84,7 +87,7 @@ truth* de la UI mientras `NATIVE_HOME_ENABLED=false`.
 ```
 luki-play-android/
 ├── app/src/main/java/com/luki/play/
-│   ├── LukiApplication.kt              ← @HiltAndroidApp, WorkManager config, WebView debug
+│   ├── LukiApplication.kt              ← @HiltAndroidApp, WorkManager config, Timber/Crashlytics, WebView debug
 │   ├── MainActivity.kt                 ← legacy/fallback WebView
 │   ├── bridge/                         ← window.LukiNative (LukiBridge + BridgeMessage)
 │   ├── cast/                           ← Chromecast (CastController, OptionsProvider)
@@ -100,10 +103,11 @@ luki-play-android/
 │   ├── player/                         ← PlayerActivity, LukiPlayerManager, StreamConfig, drm/, qos/
 │   ├── tv/                             ← TvMainActivity (WebView) + TvComposeActivity + compose/ + recommendations/
 │   ├── ui/                             ← SplashActivity, RouterActivity, NavGraph, theme/
-│   ├── util/                           ← Constants, DeviceUtils, SecureStorage, LukiApiClient
-│   └── webview/                        ← WebViewConfig, LukiWebViewClient
+│   ├── util/                           ← Constants, DeviceUtils, SecureStorage, LukiApiClient, CrashlyticsTree
+│   └── webview/                        ← WebViewConfig, LukiWebViewClient, WebViewSupport, BlankPageWatchdog
+├── app/google-services.json            ← config Firebase (Crashlytics); sin él, el build compila igual
 ├── app/src/debug/res/xml/network_security_config.xml   ← override cleartext SOLO debug
-├── app/src/test/                       ← 9 tests unitarios (JUnit/MockK/Turbine/MockWebServer)
+├── app/src/test/                       ← 8 suites de tests unitarios (JUnit/MockK/Turbine/MockWebServer)
 ├── app/src/androidTest/                ← HomeScreenSmokeTest (Compose UI)
 ├── gradle/libs.versions.toml           ← catálogo de versiones
 ├── tv-activation/                      ← helpers backend/web para activación TV (no es módulo Gradle)
@@ -168,10 +172,14 @@ window.LukiNative.enterPip()             // móvil, API 26+
 window.LukiNative.dispatch(JSON.stringify({ type: "…" }))  // dispatcher genérico
 ```
 
-> ⚠️ **Nota de seguridad:** `onLoginSuccess`/`getStoredSession` del bridge persisten
-> los tokens en `SharedPreferences` **en claro** (`luki_prefs`). La capa nativa
-> (`SecureTokenStore`) sí usa `EncryptedSharedPreferences`. Como la app publicada
-> aún va por WebView, la sesión efectiva vive en claro — ver [Seguridad](#seguridad).
+> 🔒 **Nota de seguridad:** desde v14 (1.0.11) el bridge persiste los tokens
+> **cifrados**: `onLoginSuccess`/`getStoredSession` usan el mismo `TokenStore`
+> (`SecureTokenStore` sobre `EncryptedSharedPreferences`) que la capa nativa, con
+> migración one-shot que copia y borra los tokens de las prefs planas legacy.
+> Riesgo restante conocido: cualquier JS que corra en el portal (XSS, script de
+> terceros) puede llamar `getStoredSession()` — mitigación prevista: migrar a
+> `WebViewCompat.addWebMessageListener` con allowlist de origen + CSP estricta
+> en el portal. Ver [Seguridad](#seguridad).
 
 ---
 
@@ -202,10 +210,13 @@ Si las credenciales faltan, el build no rompe (fallback a cadena vacía).
 |---|---|
 | Cleartext en release | ✅ **Prohibido** — `base-config cleartextTrafficPermitted="false"` |
 | Cleartext en debug | Solo `98.80.97.51` y `test-streams.mux.dev` (override en `src/debug/`) |
-| Mixed content WebView | `ALWAYS_ALLOW` en debug · `COMPATIBILITY_MODE` en release |
+| Mixed content WebView | `ALWAYS_ALLOW` en debug · ✅ **`NEVER_ALLOW` en release** |
+| Cookies de terceros | ✅ Deshabilitadas — el portal es un solo dominio (`lukiplay.com`) |
 | Tokens capa nativa | ✅ `EncryptedSharedPreferences` (`SecureTokenStore` / `SecureStorage`) |
-| Tokens vía bridge JS | ⚠️ `SharedPreferences` en claro (`luki_prefs`) — pendiente de migrar |
-| Logging | Timber; sin `Log.*` con tokens en release |
+| Tokens vía bridge JS | ✅ Cifrados desde v14 — mismo `TokenStore` que la capa nativa, con migración desde las prefs planas legacy |
+| Superficie del bridge JS | ⚠️ `getStoredSession()` es invocable por cualquier JS del portal (XSS / scripts de terceros) — pendiente migrar a `addWebMessageListener` con allowlist de origen |
+| URLs de stream (`playStream`) | ✅ Solo `https` en release (`http` se admite en debug para QA); el resto se rechaza con log |
+| Logging | Timber; el bridge no loguea payloads (podían contener JWT / `licenseHeaders` DRM) y en release solo WARN/ERROR llegan a Crashlytics |
 | File access WebView | ✅ Deshabilitado (`allowFileAccess=false`, `allowContentAccess=false`) |
 | Símbolos nativos de crash | `debugSymbolLevel = "FULL"` en el AAB |
 
@@ -238,7 +249,9 @@ espacial web (el `DPAD_JS` nativo se eliminó) ✅ · `KEEP_SCREEN_ON` en reprod
 | Documento | Contenido |
 |---|---|
 | [`API_INTEGRATION.md`](API_INTEGRATION.md) | Contrato REST + bridge con el backend |
-| [`CHECKLIST_ANDROID_TV.md`](CHECKLIST_ANDROID_TV.md) | Checklist de calidad Android TV (vigente) |
+| [`PLAN_MIGRACION_NATIVA_MOVIL.md`](PLAN_MIGRACION_NATIVA_MOVIL.md) | Plan por sprints de la migración nativa móvil (vigente, 2026-07-10) |
+| [`POSTMORTEM_APP_NO_ABRE_ANDROID11.md`](POSTMORTEM_APP_NO_ABRE_ANDROID11.md) | Postmortem del crash de arranque en Android ≤ 11 (resuelto en 1.0.12) |
+| [`CHECKLIST_ANDROID_TV.md`](CHECKLIST_ANDROID_TV.md) | Checklist de calidad Android TV (auditado 2026-06-15; el AAB pendiente que menciona ya se publicó como v15) |
 | [`GOOGLE_PLAY_PUBLISHING_GUIDE.md`](GOOGLE_PLAY_PUBLISHING_GUIDE.md) | Textos y config de Play Console |
 | [`AUDITORIA_LUKIPLAY_ANDROID.md`](AUDITORIA_LUKIPLAY_ANDROID.md) | Auditoría histórica (2026-05-29) — baseline |
 | [`ROADMAP_MIGRACION.md`](ROADMAP_MIGRACION.md) | Plan de migración F0–F5 (mayormente ejecutado) |
