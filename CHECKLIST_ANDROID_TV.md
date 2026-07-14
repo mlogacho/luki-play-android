@@ -4,8 +4,8 @@
 > **Actualización 2026-07-14:** la **v15 / 1.0.12** ya está **publicada en Play
 > (2026-07-10)** e incluye todos los fixes que esta cabecera daba por pendientes
 > (`KEEP_SCREEN_ON`, cifrado de sesión del bridge) más Crashlytics y el fix del
-> crash de arranque en Android ≤ 11. La acción #4 quedó cumplida; siguen vigentes
-> las #5–8 (formato TV en Console, hack `zoom=0.82`, prueba D-pad, check 16 KB).
+> crash de arranque en Android ≤ 11. Las acciones #4 y #5 quedaron cumplidas;
+> siguen vigentes las #6–8 (hack `zoom=0.82`, prueba D-pad, check 16 KB).
 > Leyenda: ✅ cumple (verificado) · ⚠️ cumple parcial / acción pendiente · ❌ no cumple · 🔍 requiere prueba manual
 
 ---
@@ -68,7 +68,7 @@
 
 ### Pendientes
 4. ~~Subir el AAB con los fixes a Play Console~~ → **hecho**: v15 / 1.0.12 publicada el 2026-07-10 (incluye `KEEP_SCREEN_ON`, cifrado de sesión del bridge, Crashlytics y fix de arranque Android ≤ 11).
-5. **Play Console: activar el formato Android TV** (Formatos del dispositivo → Android TV → "Agregar") + subir **≥1 captura 1920×1080** y enviar a revisión de TV. Sin esto la tienda no ofrece la app a TVs aunque el AAB sea elegible.
+5. ~~Play Console: activar el formato Android TV~~ → **hecho** (confirmado 2026-07-14: formato Android TV activado en Play Console).
 6. Retirar/ajustar el hack `zoom=0.82` (`TV_SCALE_JS`) y **validar legibilidad 10-foot en TV/emulador real** (cambiarlo a ciegas puede descuadrar la nav y el layout).
 7. Prueba manual solo-D-pad: login → home → player → zapping → back (foco visible, sin callejones).
 8. Tras subir el próximo AAB: verificar en Console el check de 16 KB y "Funciones necesarias" = 0 requeridas.
