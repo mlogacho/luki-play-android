@@ -207,14 +207,21 @@ class MobileMainActivity : AppCompatActivity() {
         setupRetry()
         setupWebView()
         setupBackPress()
-        binding.webView.loadUrl(mobileLoginUrl())
-        Timber.tag(TAG).d("Loading: ${mobileLoginUrl()}")
+        binding.webView.loadUrl(portalUrl())
+        Timber.tag(TAG).d("Loading: ${portalUrl()}")
     }
 
     /**
-     * URL de login para móvil. A diferencia de TV (que carga la pantalla de
-     * activación por QR en BASE_URL), el móvil abre el login con formulario/URL.
+     * URL de arranque del portal en móvil: la raíz. El route índice del portal
+     * ejecuta restoreSession() y decide destino (sesión → /home; sin sesión →
+     * /login). Cargar /login directo (commit 5474d6c) saltaba esa restauración
+     * y pedía credenciales en cada arranque aunque la sesión estuviera guardada.
+     * Ya no hay riesgo de caer en la activación QR de TV: isTvDevice() del
+     * portal consulta getDeviceInfo().isTV del bridge, que en móvil es false.
      */
+    private fun portalUrl(): String = BuildConfig.BASE_URL
+
+    /** URL del login con formulario — destino tras logout. */
     private fun mobileLoginUrl(): String =
         BuildConfig.BASE_URL.trimEnd('/') + "/login"
 
