@@ -11,10 +11,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.luki.play.data.auth.AuthRepository
+import com.luki.play.data.auth.SessionState
 import com.luki.play.data.profiles.ProfilesRepository
 import com.luki.play.feature.detail.ChannelDetailScreen
 import com.luki.play.feature.downloads.DownloadsScreen
 import com.luki.play.feature.home.HomeScreen
+import com.luki.play.feature.login.LoginScreen
 import com.luki.play.feature.parental.ParentalPinScreen
 import com.luki.play.feature.profiles.ProfilePickerScreen
 import com.luki.play.feature.search.SearchScreen
@@ -23,6 +26,7 @@ import androidx.media3.common.util.UnstableApi
 
 /** Rutas de navegación tipadas. */
 object LukiRoutes {
+    const val LOGIN     = "login"
     const val PICKER    = "picker"
     const val HOME      = "home"
     const val SEARCH    = "search"
@@ -35,7 +39,8 @@ object LukiRoutes {
  * Navegación principal móvil.
  *
  * Estructura:
- *  - Si no hay perfil activo → PICKER es startDestination.
+ *  - Sin sesión (Anonymous) → LOGIN es startDestination.
+ *  - Con sesión pero sin perfil activo → PICKER.
  *  - Una vez elegido → HOME y resto del flujo.
  *  - Parental gate se inyecta como modal sobre cualquier destino vía un
  *    `Dialog` controlado por estado al nivel del NavGraph (evita una ruta
@@ -46,6 +51,7 @@ object LukiRoutes {
 fun LukiNavGraph(
     onLaunchPlayer: (StreamConfig) -> Unit,
     profilesRepository: ProfilesRepository,
+    authRepository: AuthRepository,
     navController: NavHostController = rememberNavController(),
 ) {
     var parentalGate by remember { mutableStateOf<ParentalGateRequest?>(null) }
@@ -54,11 +60,25 @@ fun LukiNavGraph(
             parentalGate = ParentalGateRequest(onVerified, onDismissed)
         }
 
-    val startDestination =
+    fun afterLoginDestination(): String =
         if (profilesRepository.activeProfileId.value.isNullOrBlank()) LukiRoutes.PICKER
         else LukiRoutes.HOME
 
+    val startDestination =
+        if (authRepository.current() is SessionState.Anonymous) LukiRoutes.LOGIN
+        else afterLoginDestination()
+
     NavHost(navController = navController, startDestination = startDestination) {
+
+        composable(LukiRoutes.LOGIN) {
+            LoginScreen(
+                onLoggedIn = {
+                    navController.navigate(afterLoginDestination()) {
+                        popUpTo(LukiRoutes.LOGIN) { inclusive = true }
+                    }
+                },
+            )
+        }
 
         composable(LukiRoutes.PICKER) {
             ProfilePickerScreen(

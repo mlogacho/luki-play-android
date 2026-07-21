@@ -4,6 +4,7 @@ package com.luki.play.data.auth
 import com.luki.play.data.auth.api.AuthApi
 import com.luki.play.data.auth.api.ContractLoginRequest
 import com.luki.play.data.auth.api.IdLoginRequest
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,10 +40,15 @@ sealed interface SessionState {
  * invocarlas desde el hilo principal sin preocuparse por el dispatcher.
  */
 @Singleton
-class AuthRepository @Inject constructor(
+class AuthRepository internal constructor(
     private val authApi: AuthApi,
     private val tokenStore: TokenStore,
+    /** Inyectable para que los tests JVM controlen la concurrencia. */
+    private val ioDispatcher: CoroutineDispatcher,
 ) {
+
+    @Inject constructor(authApi: AuthApi, tokenStore: TokenStore) :
+        this(authApi, tokenStore, Dispatchers.IO)
 
     private val _session = MutableStateFlow(currentSnapshot())
 
@@ -74,7 +80,7 @@ class AuthRepository @Inject constructor(
             )
         }
 
-    suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun logout(): Result<Unit> = withContext(ioDispatcher) {
         runCatching {
             // Best-effort: si el servidor no responde, igualmente limpiamos local.
             runCatching { authApi.logout() }
@@ -87,7 +93,7 @@ class AuthRepository @Inject constructor(
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private suspend fun runAuth(block: suspend () -> com.luki.play.data.auth.api.AuthResponseDto): Result<AuthSession> =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             runCatching {
                 val dto = block()
                 val session = AuthSession(

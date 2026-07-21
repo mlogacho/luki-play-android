@@ -3,6 +3,7 @@ package com.luki.play.data.auth
 
 import com.luki.play.data.auth.api.AuthApi
 import com.luki.play.data.auth.api.AuthResponseDto
+import com.luki.play.data.auth.api.AuthUserDto
 import com.luki.play.data.auth.api.ContractLoginRequest
 import com.luki.play.data.auth.api.IdLoginRequest
 import com.luki.play.data.auth.api.RefreshRequest
@@ -22,13 +23,11 @@ class AuthRepositoryTest {
     @Test
     fun `loginWithId persiste sesion y emite Authenticated`() = runTest {
         val api = FakeAuthApi(
+            // Shape real del backend: user anidado (contract-login.use-case.ts).
             loginResponse = AuthResponseDto(
                 accessToken  = "a1",
                 refreshToken = "r1",
-                userId       = "u1",
-                idAlt        = null,
-                nombre       = "Sofia",
-                nameAlt      = null,
+                user         = AuthUserDto(id = "u1", name = "Sofia", email = "s@x.ec", plan = "lukiplay"),
             )
         )
         val store = FakeTokenStore()
@@ -64,7 +63,7 @@ class AuthRepositoryTest {
     @Test
     fun `loginWithContract usa endpoint correcto`() = runTest {
         val api = FakeAuthApi(
-            loginResponse = AuthResponseDto("a", null, "u", null, null, "Nick")
+            loginResponse = AuthResponseDto("a", null, AuthUserDto("u", "Nick", null, null))
         )
         val store = FakeTokenStore()
         val repo  = AuthRepository(api, store)
