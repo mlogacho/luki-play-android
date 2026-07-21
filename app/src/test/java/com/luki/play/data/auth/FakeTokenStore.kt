@@ -37,6 +37,9 @@ class FakeTokenStore(
     override fun displayName(): String? = name
     override fun deviceId(): String = fixedDeviceId
 
+    /** El id es fijo en el fake: siempre "existe", así que nunca adopta. */
+    override fun adoptDeviceId(candidate: String): String = fixedDeviceId
+
     override fun save(
         accessToken: String,
         refreshToken: String?,

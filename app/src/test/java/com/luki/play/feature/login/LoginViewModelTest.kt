@@ -170,6 +170,7 @@ private class FakeTokenStore : TokenStore {
     override fun userId(): String? = user
     override fun displayName(): String? = name
     override fun deviceId(): String = "test-device"
+    override fun adoptDeviceId(candidate: String): String = "test-device"
 
     override fun save(accessToken: String, refreshToken: String?, userId: String?, displayName: String?) {
         access = accessToken; refresh = refreshToken; user = userId; name = displayName

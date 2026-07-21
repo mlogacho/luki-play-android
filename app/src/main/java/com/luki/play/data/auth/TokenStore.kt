@@ -38,4 +38,20 @@ interface TokenStore {
 
     /** Identificador estable de dispositivo (no se borra al hacer logout). */
     fun deviceId(): String
+
+    /**
+     * Adopta un deviceId externo SOLO si aún no hay uno propio.
+     *
+     * Existe por la migración web→nativo: el portal ya venía generando su
+     * propio id en `localStorage['luki-device-id']` y registrándolo en el
+     * backend. Si el nativo estrenara uno distinto, el backend vería un
+     * dispositivo NUEVO y consumiría otro cupo de `deviceLimitPolicy` para
+     * el mismo aparato. Adoptando el de la web se preserva la continuidad.
+     *
+     * Nunca sobrescribe: si ya existe uno propio, gana el propio. Así la
+     * operación es idempotente y no puede degradarse por una llamada tardía.
+     *
+     * @return el deviceId vigente tras la operación.
+     */
+    fun adoptDeviceId(candidate: String): String
 }

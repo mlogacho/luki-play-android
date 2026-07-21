@@ -74,4 +74,14 @@ class SecureTokenStore @Inject constructor(
         prefs.edit().putString(Constants.KEY_DEVICE_ID, generated).apply()
         return generated
     }
+
+    override fun adoptDeviceId(candidate: String): String {
+        val existing = prefs.getString(Constants.KEY_DEVICE_ID, null)
+        if (!existing.isNullOrBlank()) return existing
+        val trimmed = candidate.trim()
+        // Un candidato vacío no puede fijar el id: se cae al generador.
+        if (trimmed.isEmpty()) return deviceId()
+        prefs.edit().putString(Constants.KEY_DEVICE_ID, trimmed).apply()
+        return trimmed
+    }
 }

@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.provider.Settings
 import android.webkit.JavascriptInterface
 import com.luki.play.BuildConfig
 import com.luki.play.data.auth.TokenStore
@@ -242,22 +241,57 @@ class LukiBridge(
      *   "supportsPip":   false
      * }
      * ```
+     *
+     * `deviceId` es el CANÓNICO del [TokenStore], el mismo que usa el login
+     * nativo. Antes se devolvía `Settings.Secure.ANDROID_ID`, un tercer
+     * valor distinto tanto del nativo como del de la web — y la web nunca
+     * lo leyó, así que el comentario que lo declaraba necesario para los
+     * endpoints de login era falso.
      */
     @JavascriptInterface
-    fun getDeviceInfo(): String {
-        val deviceId = Settings.Secure.getString(
-            context.contentResolver, Settings.Secure.ANDROID_ID
-        ) ?: "android-unknown"
-        return JSONObject().apply {
+    fun getDeviceInfo(): String =
+        JSONObject().apply {
             put("isTV",           deviceUtils.isTvDevice())
             put("label",          deviceUtils.getDeviceLabel())
             put("screenWidthDp",  deviceUtils.getScreenWidthDp())
             put("screenHeightDp", deviceUtils.getScreenHeightDp())
             put("supportsPip",    deviceUtils.supportsPip())
-            put("deviceId",       deviceId)   // Necesario para /auth/app/*-login
+            put("deviceId",       tokenStore.deviceId())
             put("platform",       "android")
             put("apiBaseUrl",     Constants.API_BASE_URL)  // Para que la web sepa la URL
         }.toString()
+
+    /**
+     * deviceId canónico del aparato — el MISMO que manda el login nativo en
+     * el body de `id-login` / `contract-login`. La web debe usar este valor
+     * en vez de su `localStorage['luki-device-id']` dentro de la app.
+     *
+     * JS usage: `const id = window.LukiNative.getDeviceId()`
+     */
+    @JavascriptInterface
+    fun getDeviceId(): String = tokenStore.deviceId()
+
+    /**
+     * Migración de continuidad: la web entrega el id que ya venía usando
+     * (`localStorage['luki-device-id']`) para que el nativo lo adopte como
+     * canónico. Solo surte efecto si el nativo aún no tiene uno propio.
+     *
+     * Sin esto, un usuario que ya inició sesión por el portal estrenaría un
+     * deviceId distinto al pasar al login nativo y el backend lo contaría
+     * como un SEGUNDO dispositivo bajo `deviceLimitPolicy`.
+     *
+     * Debe llamarse ANTES del primer login nativo — idealmente al arrancar
+     * la web dentro del WebView. Es idempotente.
+     *
+     * JS usage: `window.LukiNative.adoptDeviceId(getOrCreateDeviceId())`
+     *
+     * @return el deviceId vigente tras la operación (el adoptado o el propio).
+     */
+    @JavascriptInterface
+    fun adoptDeviceId(candidate: String): String {
+        val effective = tokenStore.adoptDeviceId(candidate)
+        Timber.tag(TAG).d("adoptDeviceId: adoptado=%b", effective == candidate.trim())
+        return effective
     }
 
     /**
