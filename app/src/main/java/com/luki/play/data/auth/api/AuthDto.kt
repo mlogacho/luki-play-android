@@ -37,6 +37,29 @@ data class RefreshRequest(
     @Json(name = "refreshToken") val refreshToken: String,
 )
 
+/**
+ * Solicitud de OTP de recuperación. El backend responde SIEMPRE 200 con el
+ * mismo mensaje (anti-enumeración OWASP): no confirma si la cédula existe.
+ */
+@JsonClass(generateAdapter = true)
+data class RequestPasswordOtpRequest(
+    @Json(name = "idNumber") val idNumber: String,
+)
+
+/** Reset con OTP — backend exige código de 6 y política de contraseña. */
+@JsonClass(generateAdapter = true)
+data class ResetPasswordOtpRequest(
+    @Json(name = "idNumber")    val idNumber: String,
+    @Json(name = "otpCode")     val otpCode: String,
+    @Json(name = "newPassword") val newPassword: String,
+)
+
+/** Respuesta genérica `{ message }` de los endpoints de OTP. */
+@JsonClass(generateAdapter = true)
+data class MessageResponseDto(
+    @Json(name = "message") val message: String?,
+)
+
 /** Usuario anidado en la respuesta de login — shape real del backend. */
 @JsonClass(generateAdapter = true)
 data class AuthUserDto(

@@ -4,6 +4,8 @@ package com.luki.play.data.auth
 import com.luki.play.data.auth.api.AuthApi
 import com.luki.play.data.auth.api.ContractLoginRequest
 import com.luki.play.data.auth.api.IdLoginRequest
+import com.luki.play.data.auth.api.RequestPasswordOtpRequest
+import com.luki.play.data.auth.api.ResetPasswordOtpRequest
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -79,6 +81,30 @@ class AuthRepository internal constructor(
                 )
             )
         }
+
+    /**
+     * Pide el OTP de recuperación al correo registrado. El backend responde
+     * siempre igual (anti-enumeración): un éxito aquí NO confirma que la
+     * cédula exista.
+     */
+    suspend fun requestPasswordOtp(idNumber: String): Result<Unit> = withContext(ioDispatcher) {
+        runCatching {
+            authApi.requestPasswordOtp(RequestPasswordOtpRequest(idNumber))
+            Unit
+        }.onFailure { Timber.w(it, "AuthRepository: requestPasswordOtp falló") }
+    }
+
+    /** Restablece la contraseña con el OTP recibido por correo. */
+    suspend fun resetPasswordWithOtp(
+        idNumber: String,
+        otpCode: String,
+        newPassword: String,
+    ): Result<Unit> = withContext(ioDispatcher) {
+        runCatching {
+            authApi.resetPasswordWithOtp(ResetPasswordOtpRequest(idNumber, otpCode, newPassword))
+            Unit
+        }.onFailure { Timber.w(it, "AuthRepository: resetPasswordWithOtp falló") }
+    }
 
     suspend fun logout(): Result<Unit> = withContext(ioDispatcher) {
         runCatching {

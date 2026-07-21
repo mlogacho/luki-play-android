@@ -193,4 +193,12 @@ private class RefreshingAuthApi(
         refreshException?.let { throw it }
         return refreshResponse ?: error("refreshResponse no configurado")
     }
+
+    override suspend fun requestPasswordOtp(
+        body: com.luki.play.data.auth.api.RequestPasswordOtpRequest,
+    ) = error("not used")
+
+    override suspend fun resetPasswordWithOtp(
+        body: com.luki.play.data.auth.api.ResetPasswordOtpRequest,
+    ) = error("not used")
 }

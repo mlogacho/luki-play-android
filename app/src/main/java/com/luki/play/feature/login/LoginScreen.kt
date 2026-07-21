@@ -19,6 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun LoginScreen(
     onLoggedIn: () -> Unit,
+    onForgotPassword: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -161,6 +163,14 @@ fun LoginScreen(
                 } else {
                     Text("Ingresar")
                 }
+            }
+
+            TextButton(
+                onClick = onForgotPassword,
+                enabled = !state.isLoading,
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Text("¿Olvidaste tu contraseña?")
             }
         }
     }

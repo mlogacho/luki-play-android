@@ -6,7 +6,10 @@ import com.luki.play.data.auth.api.AuthResponseDto
 import com.luki.play.data.auth.api.AuthUserDto
 import com.luki.play.data.auth.api.ContractLoginRequest
 import com.luki.play.data.auth.api.IdLoginRequest
+import com.luki.play.data.auth.api.MessageResponseDto
 import com.luki.play.data.auth.api.RefreshRequest
+import com.luki.play.data.auth.api.RequestPasswordOtpRequest
+import com.luki.play.data.auth.api.ResetPasswordOtpRequest
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -156,4 +159,10 @@ private class FakeAuthApi(
     override suspend fun logout() {
         logoutException?.let { throw it }
     }
+
+    override suspend fun requestPasswordOtp(body: RequestPasswordOtpRequest) =
+        MessageResponseDto("Si la cédula existe, enviamos un código.")
+
+    override suspend fun resetPasswordWithOtp(body: ResetPasswordOtpRequest) =
+        MessageResponseDto("Contraseña actualizada.")
 }

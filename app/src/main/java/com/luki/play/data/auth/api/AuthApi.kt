@@ -24,4 +24,10 @@ interface AuthApi {
 
     @POST(Constants.Auth.LOGOUT)
     suspend fun logout(): Unit
+
+    @POST(Constants.Auth.REQUEST_OTP)
+    suspend fun requestPasswordOtp(@Body body: RequestPasswordOtpRequest): MessageResponseDto
+
+    @POST(Constants.Auth.RESET_WITH_OTP)
+    suspend fun resetPasswordWithOtp(@Body body: ResetPasswordOtpRequest): MessageResponseDto
 }

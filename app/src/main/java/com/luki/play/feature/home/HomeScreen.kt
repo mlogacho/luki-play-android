@@ -53,6 +53,7 @@ import com.luki.play.data.catalog.domain.Slider
 fun HomeScreen(
     onChannelClick: (Channel) -> Unit,
     onOpenSearch: () -> Unit,
+    onLogout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -68,7 +69,7 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 item {
-                    LukiTopBar(onSearchClick = onOpenSearch)
+                    LukiTopBar(onSearchClick = onOpenSearch, onLogoutClick = onLogout)
                 }
                 if (state.sliders.isNotEmpty()) {
                     item { HeroCarousel(state.sliders, onChannelClick) }
@@ -89,12 +90,13 @@ fun HomeScreen(
 }
 
 @Composable
-private fun LukiTopBar(onSearchClick: () -> Unit) {
+private fun LukiTopBar(onSearchClick: () -> Unit, onLogoutClick: () -> Unit) {
     androidx.compose.foundation.layout.Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = "Luki Play",
@@ -103,17 +105,23 @@ private fun LukiTopBar(onSearchClick: () -> Unit) {
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.weight(1f),
         )
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.clickable(onClick = onSearchClick),
-        ) {
-            Text(
-                text = "Buscar",
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            )
-        }
+        TopBarAction(text = "Buscar", onClick = onSearchClick)
+        TopBarAction(text = "Salir", onClick = onLogoutClick)
+    }
+}
+
+@Composable
+private fun TopBarAction(text: String, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.clickable(onClick = onClick),
+    ) {
+        Text(
+            text = text,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+        )
     }
 }
 

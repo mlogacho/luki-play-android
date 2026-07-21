@@ -8,7 +8,10 @@ import com.luki.play.data.auth.api.AuthResponseDto
 import com.luki.play.data.auth.api.AuthUserDto
 import com.luki.play.data.auth.api.ContractLoginRequest
 import com.luki.play.data.auth.api.IdLoginRequest
+import com.luki.play.data.auth.api.MessageResponseDto
 import com.luki.play.data.auth.api.RefreshRequest
+import com.luki.play.data.auth.api.RequestPasswordOtpRequest
+import com.luki.play.data.auth.api.ResetPasswordOtpRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -148,6 +151,12 @@ private class FakeAuthApi(
         error("no usado en estos tests")
 
     override suspend fun logout() = Unit
+
+    override suspend fun requestPasswordOtp(body: RequestPasswordOtpRequest) =
+        MessageResponseDto("ok")
+
+    override suspend fun resetPasswordWithOtp(body: ResetPasswordOtpRequest) =
+        MessageResponseDto("ok")
 }
 
 private class FakeTokenStore : TokenStore {
