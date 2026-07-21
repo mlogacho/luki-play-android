@@ -27,6 +27,7 @@ class PlayerViewModel(private val savedStateHandle: SavedStateHandle) : ViewMode
         const val KEY_STREAM_URL = "stream_url"
         const val KEY_TITLE      = "title"
         const val KEY_POSITION   = "playback_position_ms"
+        const val KEY_CONFIG     = "stream_config"
     }
 
     // ------------------------------------------------------------------ //
@@ -69,6 +70,18 @@ class PlayerViewModel(private val savedStateHandle: SavedStateHandle) : ViewMode
     /** Display title set by [setTitle]. */
     val title: String
         get() = savedStateHandle[KEY_TITLE] ?: ""
+
+    /**
+     * Config del stream actualmente cargado. Es la fuente de verdad al recrear
+     * la Activity: tras un zapping vía onNewIntent + process death, el sistema
+     * vuelve a entregar el Intent ORIGINAL (setIntent no persiste), así que
+     * restaurar desde el Intent reabriría el canal equivocado.
+     */
+    fun setActiveConfig(config: StreamConfig) {
+        savedStateHandle[KEY_CONFIG] = config
+    }
+
+    fun activeConfig(): StreamConfig? = savedStateHandle[KEY_CONFIG]
 
     // ------------------------------------------------------------------ //
     //  Public API

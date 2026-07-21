@@ -7,11 +7,13 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.IntentCompat
 import androidx.core.view.WindowCompat
 import com.luki.play.R
 import com.luki.play.databinding.ActivityPlayerBinding
@@ -32,8 +34,11 @@ import com.luki.play.databinding.ActivityPlayerBinding
  *
  * DRM
  * ───
- * ⚠️ DRM Widevine no activado. Para futuro: configurar
- * DefaultDrmSessionManager si drmToken != null.
+ * Widevine está cableado vía WidevineProvider y se activa cuando
+ * [StreamConfig.hasDrm] es true. BridgeMessage.PlayStream ya parsea los
+ * campos DRM del JSON, pero LukiBridge.playStream()/dispatch() hoy NO los
+ * reenvían al construir StreamConfig — ese es el hueco a cerrar cuando se
+ * active DRM; mientras tanto todo el contenido llega in-the-clear.
  *
  * TV App Quality checklist (handled here)
  * ────────────────────────────────────────
@@ -52,6 +57,14 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
 
     companion object {
         private const val EXTRA_STREAM_CONFIG = "extra_stream_config"
+
+        /**
+         * Ventana tras un load() en la que se ignora ACTION_STOP_PLAYBACK.
+         * El patrón web stopStream()+playStream(B) llega en carrera: el
+         * broadcast es asíncrono y puede aterrizar DESPUÉS de que onNewIntent
+         * ya cargó el canal nuevo — ese stop iba dirigido al canal anterior.
+         */
+        private const val STOP_AFTER_LOAD_IGNORE_MS = 1_000L
 
         /**
          * Action sent by [com.luki.play.bridge.LukiBridge.stopStream] to
@@ -79,13 +92,22 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
     private val viewModel: PlayerViewModel by viewModels()
     private var playerManager: LukiPlayerManager? = null
 
+    /** Marca del último load(); ver [STOP_AFTER_LOAD_IGNORE_MS]. */
+    private var lastLoadAtMs = 0L
+
     // ------------------------------------------------------------------ //
     //  BroadcastReceiver — remote stop (from LukiBridge.stopStream)
     // ------------------------------------------------------------------ //
 
     private val stopReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == ACTION_STOP_PLAYBACK) finish()
+            if (intent?.action != ACTION_STOP_PLAYBACK) return
+            if (SystemClock.elapsedRealtime() - lastLoadAtMs < STOP_AFTER_LOAD_IGNORE_MS) {
+                // Stop rezagado del patrón stopStream()+playStream(): el canal
+                // nuevo acaba de cargarse; cerrar aquí lo mataría.
+                return
+            }
+            finish()
         }
     }
 
@@ -164,27 +186,57 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
     // ------------------------------------------------------------------ //
 
     private fun initPlayer() {
-        val config: StreamConfig? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(EXTRA_STREAM_CONFIG, StreamConfig::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent.getParcelableExtra(EXTRA_STREAM_CONFIG)
-        }
-
-        if (config == null || config.url.isBlank()) {
+        // Tras process death el sistema puede reentregar el Intent ORIGINAL
+        // aunque hubo zapping (setIntent no persiste): la config activa del
+        // SavedStateHandle es la fuente de verdad; el Intent es el fallback
+        // del primer arranque.
+        val config = viewModel.activeConfig() ?: readConfig(intent)
+        if (config == null) {
             viewModel.onPlaybackError(getString(R.string.player_error_no_url))
             return
         }
+        startPlayback(config, resetSavedPosition = false)
+    }
 
+    /**
+     * La Activity es singleTop: si la web hace zapping (playStream con el
+     * player ya abierto) el Intent nuevo llega aquí en vez de crear otra
+     * instancia. Se reutilizan player y MediaSession — cambio de canal más
+     * rápido y sin colisión de session IDs.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Validar ANTES de setIntent: un intent inválido no debe reemplazar
+        // el último intent bueno (retry/recreación dependen de él).
+        val config = readConfig(intent) ?: return
+        setIntent(intent)
+        // La posición guardada pertenece al canal anterior; no aplica al nuevo.
+        startPlayback(config, resetSavedPosition = true)
+    }
+
+    /**
+     * Camino único de arranque para initPlayer / onNewIntent / retry.
+     * Persiste la config activa y delega URL/estado en el manager: load()
+     * es el único dueño de setStreamUrl y de la transición a Loading.
+     */
+    private fun startPlayback(config: StreamConfig, resetSavedPosition: Boolean) {
+        if (resetSavedPosition) viewModel.saveCurrentPosition(0L)
+        viewModel.setActiveConfig(config)
+        viewModel.setTitle(config.title)
+        lastLoadAtMs = SystemClock.elapsedRealtime()
+        (playerManager ?: createManager()).load(config)
+    }
+
+    /** Parsea el [StreamConfig] del Intent; null si falta o la URL está vacía. */
+    private fun readConfig(intent: Intent): StreamConfig? =
+        IntentCompat.getParcelableExtra(intent, EXTRA_STREAM_CONFIG, StreamConfig::class.java)
+            ?.takeIf { it.url.isNotBlank() }
+
+    private fun createManager(): LukiPlayerManager {
         val manager = LukiPlayerManager(this, viewModel, this)
         playerManager = manager
         binding.playerView.player = manager.player
-
-        // Restore title into ViewModel (survives rotation via SavedStateHandle)
-        viewModel.setTitle(config.title)
-        viewModel.setStreamUrl(config.url)
-
-        manager.load(config)
+        return manager
     }
 
     private fun observeState() {
@@ -217,16 +269,15 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
 
     private fun setupRetryButton() {
         binding.retryButton.setOnClickListener {
-            viewModel.onRetry()
-            playerManager?.let { mgr ->
-                val config: StreamConfig? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    intent.getParcelableExtra(EXTRA_STREAM_CONFIG, StreamConfig::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    intent.getParcelableExtra(EXTRA_STREAM_CONFIG)
-                }
-                config?.let { mgr.load(it) }
+            val config = viewModel.activeConfig() ?: readConfig(intent)
+            if (config == null) {
+                // Sin config válida no hay nada que reintentar; cerrar evita
+                // dejar al usuario en un spinner infinito.
+                finish()
+                return@setOnClickListener
             }
+            viewModel.onRetry()
+            startPlayback(config, resetSavedPosition = false)
         }
     }
 

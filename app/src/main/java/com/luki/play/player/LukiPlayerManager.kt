@@ -19,6 +19,7 @@ import androidx.media3.session.MediaSession
 import com.luki.play.player.drm.WidevineProvider
 import com.luki.play.player.qos.QoSAnalyticsListener
 import timber.log.Timber
+import java.util.UUID
 
 /**
  * Manages the [ExoPlayer] lifecycle for [PlayerActivity].
@@ -42,6 +43,23 @@ class LukiPlayerManager(
 
     companion object {
         private const val TAG = "LukiPlayerManager"
+
+        /**
+         * Reenganches consecutivos permitidos ante ERROR_CODE_BEHIND_LIVE_WINDOW
+         * sin alcanzar READY entre medio. Superado el cap, el error se trata
+         * como fatal y llega a la UI — evita un bucle infinito de seek+prepare
+         * si la condición recurre (playlist congelado, reloj desviado).
+         */
+        private const val MAX_BEHIND_LIVE_RECOVERIES = 3
+
+        /**
+         * Offset máximo respecto al live edge tolerado al reanudar. Por debajo
+         * se reanuda donde estaba (interrupciones breves no pagan salto ni
+         * rebuffer); por encima se reengancha al vivo. Debe superar el offset
+         * normal de reproducción (hold-back ≈ 3 × targetDuration ≈ 18 s con
+         * segmentos de 6 s).
+         */
+        private const val MAX_RESUME_LIVE_OFFSET_MS = 30_000L
     }
 
     interface PlayerCallback {
@@ -63,6 +81,19 @@ class LukiPlayerManager(
     private val widevineProvider = WidevineProvider(httpDataSourceFactory)
     private val qosListener = QoSAnalyticsListener()
 
+    // ── Estado de reproducción ──────────────────────────────────────────────
+
+    /**
+     * Posición a restaurar en el primer READY. El seek se difiere porque en
+     * un vivo cualquier seek absoluto apunta dentro de la ventana DVR y deja
+     * al usuario detrás del live edge; recién con el timeline cargado el
+     * player sabe si el item es live (solo VOD restaura).
+     */
+    private var pendingRestorePositionMs = 0L
+
+    /** Reenganches BEHIND_LIVE_WINDOW consecutivos sin READY entre medio. */
+    private var behindLiveRecoveries = 0
+
     // ── ExoPlayer ────────────────────────────────────────────────────────────
 
     val player: ExoPlayer = ExoPlayer.Builder(context).build().also { p ->
@@ -71,12 +102,17 @@ class LukiPlayerManager(
     }
 
     /**
-     * MediaSession para que el sistema muestre controles de transporte en el
-     * lockscreen del móvil y en el carril de notificaciones de Android TV.
-     * Se crea junto con el player y se libera en [release].
+     * MediaSession que expone el player al sistema (audio focus, rutas, Cast).
+     * Nota: sin un MediaSessionService con notificación propia NO aparecen
+     * controles en lockscreen; si se necesitan, va como trabajo aparte.
+     *
+     * El ID es único por instancia (UUID, no timestamp: un timestamp en ms
+     * puede colisionar): Media3 lanza IllegalStateException si dos sesiones
+     * del proceso comparten ID, y en el race stopStream→playStream la
+     * Activity saliente puede solaparse brevemente con la entrante.
      */
     private val mediaSession: MediaSession = MediaSession.Builder(context, player)
-        .setId("luki-play-session")
+        .setId("luki-play-session-${UUID.randomUUID()}")
         .build()
 
     // ── Public API ───────────────────────────────────────────────────────────
@@ -115,9 +151,14 @@ class LukiPlayerManager(
 
         val mediaSource = buildMediaSource(mediaItem, config)
 
+        pendingRestorePositionMs = viewModel.restorePosition()
+        behindLiveRecoveries = 0
+
         player.apply {
             setMediaSource(mediaSource)
-            seekTo(viewModel.restorePosition())
+            // Sin seek aquí: ExoPlayer arranca en la posición por defecto
+            // (live edge − hold-back para vivos, 0 para VOD). La restauración
+            // de posición se difiere al primer READY — ver pendingRestorePositionMs.
             playWhenReady = true
             prepare()
         }
@@ -131,6 +172,17 @@ class LukiPlayerManager(
     }
 
     fun resume() {
+        // Un lineal pausado queda cada vez más atrás del vivo. Solo se
+        // reengancha al live edge si quedó materialmente atrás (pausa larga);
+        // una interrupción breve (diálogo del sistema, multiventana) reanuda
+        // donde estaba, sin salto ni rebuffer. Antes del primer READY es un
+        // no-op (offset desconocido / item no live).
+        if (player.isCurrentMediaItemLive) {
+            val offsetMs = player.currentLiveOffset
+            if (offsetMs != C.TIME_UNSET && offsetMs > MAX_RESUME_LIVE_OFFSET_MS) {
+                player.seekToDefaultPosition()
+            }
+        }
         player.play()
     }
 
@@ -141,11 +193,6 @@ class LukiPlayerManager(
         mediaSession.release()
         player.release()
     }
-
-    /** True si el player está cargado y reproduciendo / en buffering. */
-    fun isPlayingOrBuffering(): Boolean =
-        player.playbackState == Player.STATE_READY ||
-        player.playbackState == Player.STATE_BUFFERING
 
     /** Expone las métricas QoS actuales para debug o telemetría externa. */
     fun qosSnapshot() = qosListener.snapshot()
@@ -185,6 +232,12 @@ class LukiPlayerManager(
                     callback.onBuffering()
                 }
                 Player.STATE_READY -> {
+                    behindLiveRecoveries = 0
+                    val pending = pendingRestorePositionMs
+                    pendingRestorePositionMs = 0L
+                    if (pending > 0 && !player.isCurrentMediaItemLive) {
+                        player.seekTo(pending)
+                    }
                     viewModel.onPlaybackReady()
                     callback.onReady()
                 }
@@ -194,8 +247,26 @@ class LukiPlayerManager(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW &&
+                behindLiveRecoveries < MAX_BEHIND_LIVE_RECOVERIES
+            ) {
+                // Recuperable: la posición cayó fuera de la ventana DVR del
+                // playlist (pausa larga, red lenta). Reengancha al vivo y sigue
+                // sin mostrar pantalla de error. El contador evita un bucle
+                // infinito si la condición recurre; se resetea en cada READY.
+                behindLiveRecoveries++
+                Timber.tag(TAG).w(
+                    "onPlayerError: behind live window, reenganchando (%d/%d)",
+                    behindLiveRecoveries, MAX_BEHIND_LIVE_RECOVERIES,
+                )
+                qosListener.onErrorRecovered()
+                player.seekToDefaultPosition()
+                player.prepare()
+                return
+            }
             val msg = error.message ?: "Unknown playback error"
             Timber.tag(TAG).e(error, "onPlayerError: %s", msg)
+            qosListener.onFatalError(error.errorCode)
             viewModel.onPlaybackError(msg)
             callback.onError(msg)
         }

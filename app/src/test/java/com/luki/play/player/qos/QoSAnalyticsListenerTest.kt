@@ -1,35 +1,41 @@
 // test/player/qos/QoSAnalyticsListenerTest.kt
 package com.luki.play.player.qos
 
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * Test del reductor de eventos. No reproduce nada — sólo simula la secuencia
  * de callbacks que ExoPlayer emite y verifica el snapshot resultante.
+ *
+ * Usa un reloj falso inyectado en vez de SystemClock (API de Android que en
+ * unit tests JVM lanza "Method not mocked") y de Thread.sleep (flaky). Cada
+ * test avanza `nowMs` a mano y asserta valores exactos.
  */
 @UnstableApi
 class QoSAnalyticsListenerTest {
 
     private val eventTime: AnalyticsListener.EventTime = mockk(relaxed = true)
 
+    private var nowMs = 1_000L
+    private val listener = QoSAnalyticsListener { nowMs }
+
     @Test
-    fun `startup time is positive after first READY`() {
-        val q = QoSAnalyticsListener()
-        q.onLoadStarted("https://x/y.m3u8")
+    fun `startup time is measured between load and first READY`() {
+        listener.onLoadStarted("https://x/y.m3u8")
 
-        q.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
-        Thread.sleep(20)
-        q.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
+        nowMs += 250
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
 
-        val s = q.snapshot()
-        assertTrue("startup should be > 0, was ${s.startupTimeMs}", s.startupTimeMs >= 0)
+        val s = listener.snapshot()
+        assertEquals(250L, s.startupTimeMs)
         assertEquals("https://x/y.m3u8", s.streamUrl)
         assertEquals(0, s.rebufferCount)
         assertNull(s.fatalErrorCode)
@@ -37,48 +43,104 @@ class QoSAnalyticsListenerTest {
 
     @Test
     fun `rebuffer cycle increments count and accumulates ms`() {
-        val q = QoSAnalyticsListener()
-        q.onLoadStarted("u")
-        q.onPlaybackStateChanged(eventTime, Player.STATE_READY)   // startup
+        listener.onLoadStarted("u")
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)   // startup
 
-        // primer rebuffer
-        q.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
-        Thread.sleep(15)
-        q.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+        // primer rebuffer: 15 ms
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
+        nowMs += 15
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
 
-        // segundo rebuffer
-        q.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
-        Thread.sleep(10)
-        q.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+        // segundo rebuffer: 10 ms
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
+        nowMs += 10
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
 
-        val s = q.snapshot()
+        val s = listener.snapshot()
         assertEquals(2, s.rebufferCount)
-        assertTrue("rebufferMs should accumulate, was ${s.rebufferMs}", s.rebufferMs >= 20)
+        assertEquals(25L, s.rebufferMs)
     }
 
     @Test
     fun `buffering before first ready is not counted as rebuffer`() {
-        val q = QoSAnalyticsListener()
-        q.onLoadStarted("u")
-        q.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
-        q.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+        listener.onLoadStarted("u")
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
+        nowMs += 100
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
 
-        assertEquals(0, q.snapshot().rebufferCount)
+        val s = listener.snapshot()
+        assertEquals(0, s.rebufferCount)
+        assertEquals(0L, s.rebufferMs)
+        assertEquals(100L, s.startupTimeMs)
     }
 
     @Test
     fun `onLoadStarted resets all metrics`() {
-        val q = QoSAnalyticsListener()
-        q.onLoadStarted("u1")
-        q.onPlaybackStateChanged(eventTime, Player.STATE_READY)
-        q.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
-        q.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+        listener.onLoadStarted("u1")
+        nowMs += 50
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
+        nowMs += 20
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+        listener.recordError(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
+        listener.onErrorRecovered()
 
-        q.onLoadStarted("u2")
-        val s = q.snapshot()
+        listener.onLoadStarted("u2")
+        val s = listener.snapshot()
         assertEquals("u2", s.streamUrl)
         assertEquals(0, s.rebufferCount)
         assertEquals(0L, s.rebufferMs)
         assertEquals(-1L, s.startupTimeMs)
+        assertEquals(0, s.recoveredErrorCount)
+        assertNull(s.fatalErrorCode)
+    }
+
+    @Test
+    fun `fatal error records its code`() {
+        listener.onLoadStarted("u")
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+
+        listener.recordError(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
+
+        assertEquals(
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            listener.snapshot().fatalErrorCode,
+        )
+    }
+
+    @Test
+    fun `behind live window is not fatal unless the manager reports it`() {
+        listener.onLoadStarted("u")
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+
+        // El AnalyticsListener ve el error, pero la decisión es del manager.
+        listener.recordError(PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW)
+        listener.onErrorRecovered()
+
+        var s = listener.snapshot()
+        assertNull(s.fatalErrorCode)
+        assertEquals(1, s.recoveredErrorCount)
+
+        // Cap de reenganches agotado: el manager lo declara fatal explícitamente.
+        listener.onFatalError(PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW)
+        s = listener.snapshot()
+        assertEquals(PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW, s.fatalErrorCode)
+        assertEquals(1, s.recoveredErrorCount)
+    }
+
+    @Test
+    fun `IDLE and ENDED transitions do not disturb metrics`() {
+        listener.onLoadStarted("u")
+        nowMs += 100
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
+
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_IDLE)
+        listener.onPlaybackStateChanged(eventTime, Player.STATE_ENDED)
+
+        val s = listener.snapshot()
+        assertEquals(100L, s.startupTimeMs)
+        assertEquals(0, s.rebufferCount)
+        assertEquals(0L, s.rebufferMs)
+        assertNull(s.fatalErrorCode)
     }
 }

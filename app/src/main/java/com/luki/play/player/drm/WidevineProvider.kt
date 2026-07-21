@@ -24,7 +24,8 @@ import timber.log.Timber
  *    (no inicializa nada), de modo que coexisten clear y DRM en el mismo player.
  *  - L1 vs L3: ExoPlayer negocia automáticamente con `FrameworkMediaDrm`; el
  *    nivel real lo decide el dispositivo. La política "1080p L1 / 720p L3" del
- *    roadmap se aplica en el [com.luki.play.player.tracks.TrackSelector], no aquí.
+ *    roadmap se aplicará vía selección de tracks cuando ese componente exista
+ *    (hoy no hay TrackSelector propio en el proyecto), no aquí.
  *
  * NOTA: la API DRM de Media3 está marcada como `@UnstableApi`. Anotar a nivel de
  * clase para acotar el opt-in.
