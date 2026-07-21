@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.webkit.JavascriptInterface
 import com.luki.play.BuildConfig
@@ -106,8 +107,11 @@ class LukiBridge(
     fun stopStream() {
         Timber.tag(TAG).d("stopStream()")
         // PlayerActivity finishes itself; broadcast is simpler than keeping a reference.
+        // El instante de emisión permite al receiver descartar stops rezagados
+        // del patrón stopStream()+playStream() — ver EXTRA_STOP_ISSUED_AT.
         val intent = Intent(PlayerActivity.ACTION_STOP_PLAYBACK)
             .setPackage(context.packageName)
+            .putExtra(PlayerActivity.EXTRA_STOP_ISSUED_AT, SystemClock.elapsedRealtime())
         context.sendBroadcast(intent)
     }
 

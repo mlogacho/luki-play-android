@@ -59,18 +59,21 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
         private const val EXTRA_STREAM_CONFIG = "extra_stream_config"
 
         /**
-         * Ventana tras un load() en la que se ignora ACTION_STOP_PLAYBACK.
-         * El patrón web stopStream()+playStream(B) llega en carrera: el
-         * broadcast es asíncrono y puede aterrizar DESPUÉS de que onNewIntent
-         * ya cargó el canal nuevo — ese stop iba dirigido al canal anterior.
-         */
-        private const val STOP_AFTER_LOAD_IGNORE_MS = 1_000L
-
-        /**
          * Action sent by [com.luki.play.bridge.LukiBridge.stopStream] to
          * request the player to finish itself from outside.
          */
         const val ACTION_STOP_PLAYBACK = "com.luki.play.ACTION_STOP_PLAYBACK"
+
+        /**
+         * Instante ([SystemClock.elapsedRealtime], long) en que el bridge emitió
+         * el stop. El patrón web stopStream()+playStream(B) llega en carrera y
+         * el broadcast puede aterrizar DESPUÉS de que onNewIntent cargó el canal
+         * nuevo; comparar instantes de emisión (bridge y Activity viven en el
+         * mismo proceso, así que elapsedRealtime es comparable) descarta solo
+         * los stops emitidos ANTES del load vigente — un stop legítimo posterior
+         * al load siempre cierra, sin ventana arbitraria que pueda tragárselo.
+         */
+        const val EXTRA_STOP_ISSUED_AT = "extra_stop_issued_at_elapsed_ms"
 
         /**
          * Factory method — always use this to create the launch Intent.
@@ -92,7 +95,7 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
     private val viewModel: PlayerViewModel by viewModels()
     private var playerManager: LukiPlayerManager? = null
 
-    /** Marca del último load(); ver [STOP_AFTER_LOAD_IGNORE_MS]. */
+    /** Marca del último load(); ver [EXTRA_STOP_ISSUED_AT]. */
     private var lastLoadAtMs = 0L
 
     // ------------------------------------------------------------------ //
@@ -102,9 +105,12 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
     private val stopReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != ACTION_STOP_PLAYBACK) return
-            if (SystemClock.elapsedRealtime() - lastLoadAtMs < STOP_AFTER_LOAD_IGNORE_MS) {
-                // Stop rezagado del patrón stopStream()+playStream(): el canal
-                // nuevo acaba de cargarse; cerrar aquí lo mataría.
+            // Sin extra (emisor desconocido) se honra el stop: mejor cerrar de
+            // más que dejar el player imposible de cerrar desde la web.
+            val issuedAtMs = intent.getLongExtra(EXTRA_STOP_ISSUED_AT, Long.MAX_VALUE)
+            if (issuedAtMs < lastLoadAtMs) {
+                // Stop rezagado del patrón stopStream()+playStream(): fue emitido
+                // ANTES del load vigente e iba dirigido al canal anterior.
                 return
             }
             finish()
@@ -222,7 +228,6 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
     private fun startPlayback(config: StreamConfig, resetSavedPosition: Boolean) {
         if (resetSavedPosition) viewModel.saveCurrentPosition(0L)
         viewModel.setActiveConfig(config)
-        viewModel.setTitle(config.title)
         lastLoadAtMs = SystemClock.elapsedRealtime()
         (playerManager ?: createManager()).load(config)
     }

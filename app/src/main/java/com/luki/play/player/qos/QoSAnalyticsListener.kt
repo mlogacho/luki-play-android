@@ -97,8 +97,9 @@ class QoSAnalyticsListener(
 
     /**
      * El caller (manager) decidió que un error es fatal (incluye el caso de
-     * cap de reenganches agotado). Idempotente con [onPlayerError] para los
-     * códigos que este listener registra por sí mismo.
+     * cap de reenganches agotado). Es el ÚNICO escritor de [fatalErrorCode]:
+     * la clasificación recuperable/fatal vive solo en el manager, así no hay
+     * dos listas de códigos que puedan divergir.
      */
     fun onFatalError(code: Int) {
         fatalErrorCode = code
@@ -159,25 +160,17 @@ class QoSAnalyticsListener(
         }
     }
 
+    /**
+     * Solo log. La clasificación recuperable/fatal es del manager, que reporta
+     * el desenlace vía [onErrorRecovered] / [onFatalError] — así el resultado
+     * no depende del orden de notificación entre listeners ni existe una
+     * segunda lista de códigos recuperables que mantener sincronizada.
+     */
     override fun onPlayerError(
         eventTime: AnalyticsListener.EventTime,
         error: PlaybackException,
     ) {
         Timber.tag(TAG).e(error, "qos.error code=%d name=%s", error.errorCode, error.errorCodeName)
-        recordError(error.errorCode)
-    }
-
-    /**
-     * Núcleo de registro de errores, separado del callback para poder testearse
-     * en JVM (construir un [PlaybackException] real toca APIs de Android).
-     *
-     * BEHIND_LIVE_WINDOW no se marca fatal aquí: el manager la reintenta y
-     * reporta el desenlace vía [onErrorRecovered] / [onFatalError] — así el
-     * resultado no depende del orden de notificación entre listeners.
-     */
-    internal fun recordError(code: Int) {
-        if (code == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) return
-        fatalErrorCode = code
     }
 
     companion object {

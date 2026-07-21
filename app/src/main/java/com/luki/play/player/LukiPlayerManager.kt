@@ -2,11 +2,13 @@
 package com.luki.play.player
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -45,19 +47,27 @@ class LukiPlayerManager(
         private const val TAG = "LukiPlayerManager"
 
         /**
-         * Reenganches consecutivos permitidos ante ERROR_CODE_BEHIND_LIVE_WINDOW
-         * sin alcanzar READY entre medio. Superado el cap, el error se trata
-         * como fatal y llega a la UI — evita un bucle infinito de seek+prepare
-         * si la condición recurre (playlist congelado, reloj desviado).
+         * Reenganches permitidos ante ERROR_CODE_BEHIND_LIVE_WINDOW dentro de
+         * una misma ráfaga (ver [BLW_BURST_WINDOW_MS]). Superado el cap, el
+         * error se trata como fatal y llega a la UI — evita un bucle infinito
+         * de seek+prepare si la condición recurre (playlist congelado, reloj
+         * desviado). El contador NO se resetea al llegar a READY: un playlist
+         * congelado alcanza READY entre errores y reventaría el cap si sí.
          */
         private const val MAX_BEHIND_LIVE_RECOVERIES = 3
 
         /**
-         * Offset máximo respecto al live edge tolerado al reanudar. Por debajo
-         * se reanuda donde estaba (interrupciones breves no pagan salto ni
-         * rebuffer); por encima se reengancha al vivo. Debe superar el offset
-         * normal de reproducción (hold-back ≈ 3 × targetDuration ≈ 18 s con
-         * segmentos de 6 s).
+         * Dos BLW separados por más de esto se consideran ráfagas distintas y
+         * el contador arranca de cero: un BLW esporádico (una pausa larga cada
+         * tanto) debe recuperarse siempre; solo la recurrencia rápida es fatal.
+         */
+        private const val BLW_BURST_WINDOW_MS = 60_000L
+
+        /**
+         * Tope del umbral de reenganche al reanudar. El umbral efectivo es
+         * min(esto, mitad de la distancia al inicio de la ventana DVR): con la
+         * ventana real de hoy (36 s, default position ≈ 18 s) un tope fijo de
+         * 30 s sería inalcanzable porque BEHIND_LIVE_WINDOW dispara antes.
          */
         private const val MAX_RESUME_LIVE_OFFSET_MS = 30_000L
     }
@@ -91,8 +101,18 @@ class LukiPlayerManager(
      */
     private var pendingRestorePositionMs = 0L
 
-    /** Reenganches BEHIND_LIVE_WINDOW consecutivos sin READY entre medio. */
+    /** Reenganches BEHIND_LIVE_WINDOW dentro de la ráfaga actual. */
     private var behindLiveRecoveries = 0
+
+    /** Instante ([SystemClock.elapsedRealtime]) del último reenganche BLW. */
+    private var lastBlwRecoveryAtMs = 0L
+
+    /**
+     * Hay un reenganche BLW en vuelo cuyo desenlace aún no se conoce. Se
+     * confirma como recuperación (QoS) recién al llegar a READY — así el
+     * contador de QoS mide recuperaciones reales, no intentos.
+     */
+    private var pendingBlwRecovery = false
 
     // ── ExoPlayer ────────────────────────────────────────────────────────────
 
@@ -153,6 +173,8 @@ class LukiPlayerManager(
 
         pendingRestorePositionMs = viewModel.restorePosition()
         behindLiveRecoveries = 0
+        lastBlwRecoveryAtMs = 0L
+        pendingBlwRecovery = false
 
         player.apply {
             setMediaSource(mediaSource)
@@ -167,7 +189,12 @@ class LukiPlayerManager(
     }
 
     fun saveAndPause() {
-        viewModel.saveCurrentPosition(player.currentPosition)
+        // Antes del primer READY el seek diferido aún no corrió y
+        // currentPosition es 0: guardar aquí pisaría con 0 la posición
+        // pendiente de restaurar (Home antes de que cargue el manifiesto).
+        if (pendingRestorePositionMs == 0L) {
+            viewModel.saveCurrentPosition(player.currentPosition)
+        }
         player.pause()
     }
 
@@ -176,11 +203,21 @@ class LukiPlayerManager(
         // reengancha al live edge si quedó materialmente atrás (pausa larga);
         // una interrupción breve (diálogo del sistema, multiventana) reanuda
         // donde estaba, sin salto ni rebuffer. Antes del primer READY es un
-        // no-op (offset desconocido / item no live).
-        if (player.isCurrentMediaItemLive) {
-            val offsetMs = player.currentLiveOffset
-            if (offsetMs != C.TIME_UNSET && offsetMs > MAX_RESUME_LIVE_OFFSET_MS) {
-                player.seekToDefaultPosition()
+        // no-op (timeline vacío / item no live).
+        //
+        // La distancia se mide contra el timeline (defaultPosition − posición),
+        // NUNCA contra currentLiveOffset: en HLS ese offset se calcula con el
+        // reloj del dispositivo contra el PROGRAM-DATE-TIME del servidor, y un
+        // reloj desviado lo vuelve inútil en ambas direcciones (adelantado:
+        // reengancha y rebufferea en cada resume; atrasado: nunca reengancha).
+        val timeline = player.currentTimeline
+        if (player.isCurrentMediaItemLive && !timeline.isEmpty) {
+            val window = timeline.getWindow(player.currentMediaItemIndex, Timeline.Window())
+            val defaultPositionMs = window.defaultPositionMs
+            if (defaultPositionMs > 0) {
+                val behindLiveMs = defaultPositionMs - player.currentPosition
+                val thresholdMs = minOf(MAX_RESUME_LIVE_OFFSET_MS, defaultPositionMs / 2)
+                if (behindLiveMs > thresholdMs) player.seekToDefaultPosition()
             }
         }
         player.play()
@@ -188,7 +225,12 @@ class LukiPlayerManager(
 
     fun release() {
         Timber.tag(TAG).d("release")
-        viewModel.saveCurrentPosition(player.currentPosition)
+        // Deja rastro de la sesión en el log (Crashlytics en release vía
+        // CrashlyticsTree) — sin esto las métricas QoS no salen del proceso.
+        Timber.tag(TAG).i("qos.final %s", qosListener.snapshot())
+        if (pendingRestorePositionMs == 0L) {
+            viewModel.saveCurrentPosition(player.currentPosition)
+        }
         player.removeAnalyticsListener(qosListener)
         mediaSession.release()
         player.release()
@@ -232,7 +274,13 @@ class LukiPlayerManager(
                     callback.onBuffering()
                 }
                 Player.STATE_READY -> {
-                    behindLiveRecoveries = 0
+                    if (pendingBlwRecovery) {
+                        // Reenganche BLW confirmado: recién aquí cuenta como
+                        // recuperación real. El contador de ráfaga NO se
+                        // resetea (eso lo decide BLW_BURST_WINDOW_MS).
+                        pendingBlwRecovery = false
+                        qosListener.onErrorRecovered()
+                    }
                     val pending = pendingRestorePositionMs
                     pendingRestorePositionMs = 0L
                     if (pending > 0 && !player.isCurrentMediaItemLive) {
@@ -247,26 +295,34 @@ class LukiPlayerManager(
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW &&
-                behindLiveRecoveries < MAX_BEHIND_LIVE_RECOVERIES
-            ) {
-                // Recuperable: la posición cayó fuera de la ventana DVR del
-                // playlist (pausa larga, red lenta). Reengancha al vivo y sigue
-                // sin mostrar pantalla de error. El contador evita un bucle
-                // infinito si la condición recurre; se resetea en cada READY.
-                behindLiveRecoveries++
-                Timber.tag(TAG).w(
-                    "onPlayerError: behind live window, reenganchando (%d/%d)",
-                    behindLiveRecoveries, MAX_BEHIND_LIVE_RECOVERIES,
-                )
-                qosListener.onErrorRecovered()
-                player.seekToDefaultPosition()
-                player.prepare()
-                return
+            if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+                val nowMs = SystemClock.elapsedRealtime()
+                if (nowMs - lastBlwRecoveryAtMs > BLW_BURST_WINDOW_MS) {
+                    // Ráfaga nueva: el BLW anterior quedó lejos; un esporádico
+                    // (pausa larga ocasional) debe recuperarse siempre.
+                    behindLiveRecoveries = 0
+                }
+                if (behindLiveRecoveries < MAX_BEHIND_LIVE_RECOVERIES) {
+                    // Recuperable: la posición cayó fuera de la ventana DVR del
+                    // playlist (pausa larga, red lenta). Reengancha al vivo y
+                    // sigue sin mostrar pantalla de error. El cap por ráfaga
+                    // corta el bucle si la condición recurre en caliente.
+                    behindLiveRecoveries++
+                    lastBlwRecoveryAtMs = nowMs
+                    pendingBlwRecovery = true
+                    Timber.tag(TAG).w(
+                        "onPlayerError: behind live window, reenganchando (%d/%d)",
+                        behindLiveRecoveries, MAX_BEHIND_LIVE_RECOVERIES,
+                    )
+                    player.seekToDefaultPosition()
+                    player.prepare()
+                    return
+                }
             }
             val msg = error.message ?: "Unknown playback error"
             Timber.tag(TAG).e(error, "onPlayerError: %s", msg)
             qosListener.onFatalError(error.errorCode)
+            Timber.tag(TAG).i("qos.final %s", qosListener.snapshot())
             viewModel.onPlaybackError(msg)
             callback.onError(msg)
         }

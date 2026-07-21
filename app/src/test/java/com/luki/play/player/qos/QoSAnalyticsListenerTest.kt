@@ -82,7 +82,7 @@ class QoSAnalyticsListenerTest {
         listener.onPlaybackStateChanged(eventTime, Player.STATE_BUFFERING)
         nowMs += 20
         listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
-        listener.recordError(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
+        listener.onFatalError(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
         listener.onErrorRecovered()
 
         listener.onLoadStarted("u2")
@@ -100,7 +100,7 @@ class QoSAnalyticsListenerTest {
         listener.onLoadStarted("u")
         listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
 
-        listener.recordError(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
+        listener.onFatalError(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED)
 
         assertEquals(
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
@@ -109,12 +109,11 @@ class QoSAnalyticsListenerTest {
     }
 
     @Test
-    fun `behind live window is not fatal unless the manager reports it`() {
+    fun `recovered errors do not mark the session fatal`() {
         listener.onLoadStarted("u")
         listener.onPlaybackStateChanged(eventTime, Player.STATE_READY)
 
-        // El AnalyticsListener ve el error, pero la decisión es del manager.
-        listener.recordError(PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW)
+        // El manager recuperó (p.ej. reenganche BLW): cuenta aparte, no fatal.
         listener.onErrorRecovered()
 
         var s = listener.snapshot()

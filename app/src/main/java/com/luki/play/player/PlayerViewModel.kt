@@ -11,7 +11,7 @@ import androidx.lifecycle.ViewModel
  *
  * Responsibilities:
  * - Exposes a [PlayerState] sealed hierarchy via [uiState] LiveData.
- * - Holds [streamUrl] and [title] extracted from the Intent/SavedState.
+ * - Holds the active [StreamConfig] as source of truth across process death.
  * - Survives rotation / configuration changes (SavedStateHandle).
  * - Persists playback position across process-death via [SavedStateHandle].
  *
@@ -24,10 +24,8 @@ class PlayerViewModel(private val savedStateHandle: SavedStateHandle) : ViewMode
     // ------------------------------------------------------------------ //
 
     private companion object {
-        const val KEY_STREAM_URL = "stream_url"
-        const val KEY_TITLE      = "title"
-        const val KEY_POSITION   = "playback_position_ms"
-        const val KEY_CONFIG     = "stream_config"
+        const val KEY_POSITION = "playback_position_ms"
+        const val KEY_CONFIG   = "stream_config"
     }
 
     // ------------------------------------------------------------------ //
@@ -63,13 +61,12 @@ class PlayerViewModel(private val savedStateHandle: SavedStateHandle) : ViewMode
     //  Stream metadata (restored on process re-creation)
     // ------------------------------------------------------------------ //
 
-    /** HLS manifest URL set by [setStreamUrl]. */
-    val streamUrl: String
-        get() = savedStateHandle[KEY_STREAM_URL] ?: ""
-
-    /** Display title set by [setTitle]. */
-    val title: String
-        get() = savedStateHandle[KEY_TITLE] ?: ""
+    /**
+     * URL actualmente cargada — solo respalda el guard de idempotencia de
+     * [setStreamUrl]. No se persiste: tras process death la config activa
+     * ([KEY_CONFIG]) ya restaura todo y un primer setStreamUrl debe pasar.
+     */
+    private var streamUrl: String = ""
 
     /**
      * Config del stream actualmente cargado. Es la fuente de verdad al recrear
@@ -93,13 +90,8 @@ class PlayerViewModel(private val savedStateHandle: SavedStateHandle) : ViewMode
      */
     fun setStreamUrl(url: String) {
         if (streamUrl == url && _uiState.value == PlayerState.Playing) return
-        savedStateHandle[KEY_STREAM_URL] = url
+        streamUrl = url
         _uiState.value = PlayerState.Loading
-    }
-
-    /** Update the display title (does not affect playback state). */
-    fun setTitle(title: String) {
-        savedStateHandle[KEY_TITLE] = title
     }
 
     /** Transitions to [PlayerState.Playing]. Called by the Activity's player listener. */
