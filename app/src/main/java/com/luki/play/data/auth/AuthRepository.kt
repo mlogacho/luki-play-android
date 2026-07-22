@@ -133,6 +133,8 @@ class AuthRepository internal constructor(
                     refreshToken = session.refreshToken,
                     userId       = session.userId.takeIf { it.isNotBlank() },
                     displayName  = session.displayName.takeIf { it.isNotBlank() },
+                    email        = dto.user?.email,
+                    plan         = dto.user?.plan,
                 )
                 _session.value = SessionState.Authenticated(session.userId, session.displayName)
                 session

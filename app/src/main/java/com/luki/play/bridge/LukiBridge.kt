@@ -148,7 +148,11 @@ class LukiBridge(
                 accessToken  = accessToken,
                 refreshToken = obj.optString("refreshToken").ifBlank { null },
                 userId       = obj.optString("userId").ifBlank { null },
-                displayName  = obj.optString("displayName").ifBlank { null }
+                displayName  = obj.optString("displayName").ifBlank { null },
+                // Opcionales: el portal puede no enviarlos. Solo alimentan el
+                // avatar y la tarjeta de cuenta del home nativo.
+                email        = obj.optString("email").ifBlank { null },
+                plan         = obj.optString("plan").ifBlank { null },
             )
             Timber.tag(TAG).i("onLoginSuccess: sesión persistida")
         } catch (e: Exception) {

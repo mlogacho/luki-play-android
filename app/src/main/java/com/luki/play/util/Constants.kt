@@ -55,6 +55,8 @@ object Constants {
     const val KEY_REFRESH_TOKEN   = "luki_refresh_token"
     const val KEY_USER_ID         = "luki_user_id"
     const val KEY_DISPLAY_NAME    = "luki_display_name"
+    const val KEY_EMAIL           = "luki_email"
+    const val KEY_PLAN            = "luki_plan"
     const val KEY_DEVICE_ID       = "luki_device_id"
 
     // ── Intent extras ──────────────────────────────────────────────────────

@@ -115,9 +115,13 @@ fun LukiNavGraph(
         }
 
         composable(LukiRoutes.HOME) {
+            // Sin entrada a SEARCH: el header del portal no la tiene. Sus
+            // pestañas (Inicio/Buscar/Mi Lista) están ocultas en web, que es
+            // justo la versión que ve hoy el usuario dentro del WebView, así
+            // que replicarla deja la búsqueda sin acceso. Queda pendiente
+            // decidir si se recupera con la barra inferior del portal.
             HomeScreen(
                 onChannelClick = { ch -> navController.navigate(LukiRoutes.detail(ch.id)) },
-                onOpenSearch   = { navController.navigate(LukiRoutes.SEARCH) },
                 onLogout       = { sessionViewModel.logout() },
             )
         }

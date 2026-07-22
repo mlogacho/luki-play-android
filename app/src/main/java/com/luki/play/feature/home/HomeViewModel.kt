@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.luki.play.data.catalog.ChannelsRepository
 import com.luki.play.data.catalog.domain.Channel
 import com.luki.play.data.catalog.domain.Slider
+import com.luki.play.data.auth.TokenStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,6 +25,7 @@ import javax.inject.Inject
 data class HomeUiState(
     val sliders: List<Slider> = emptyList(),
     val rows: List<ChannelRow> = emptyList(),
+    val user: HomeUser? = null,
     val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -31,6 +33,16 @@ data class HomeUiState(
 data class ChannelRow(
     val category: String,
     val channels: List<Channel>,
+)
+
+/**
+ * Datos del usuario que pinta el avatar y la tarjeta del menú de cuenta,
+ * equivalentes a `useAuthStore(s => s.user)` en el portal.
+ */
+data class HomeUser(
+    val name: String,
+    val email: String,
+    val plan: String,
 )
 
 /**
@@ -46,9 +58,23 @@ private data class TransientState(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: ChannelsRepository,
+    private val tokenStore: TokenStore,
 ) : ViewModel() {
 
     private val transient = MutableStateFlow(TransientState())
+
+    /**
+     * Snapshot del usuario en sesión. Se lee una vez: estos datos solo
+     * cambian al iniciar sesión, y ese camino ya recrea la pantalla.
+     */
+    private val currentUser: HomeUser? =
+        tokenStore.accessToken()?.let {
+            HomeUser(
+                name  = tokenStore.displayName().orEmpty(),
+                email = tokenStore.email().orEmpty(),
+                plan  = tokenStore.plan().orEmpty(),
+            )
+        }
 
     val uiState: StateFlow<HomeUiState> = combine(
         repository.observeChannels(),
@@ -61,6 +87,7 @@ class HomeViewModel @Inject constructor(
         HomeUiState(
             sliders      = t.sliders,
             rows         = rows,
+            user         = currentUser,
             isRefreshing = t.isRefreshing,
             errorMessage = t.errorMessage,
         )

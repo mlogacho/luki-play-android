@@ -53,12 +53,20 @@ object SecureStorage {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /** Claves que nunca deben permanecer en el fichero plano legacy. */
+    /**
+     * Claves que nunca deben permanecer en el fichero plano legacy.
+     *
+     * Incluye correo y plan: son datos de la sesión —el correo además es
+     * dato personal— y tienen que viajar al almacén cifrado junto con el
+     * resto, no quedarse en claro en el fichero antiguo.
+     */
     private val SENSITIVE_KEYS = listOf(
         Constants.KEY_ACCESS_TOKEN,
         Constants.KEY_REFRESH_TOKEN,
         Constants.KEY_USER_ID,
         Constants.KEY_DISPLAY_NAME,
+        Constants.KEY_EMAIL,
+        Constants.KEY_PLAN,
     )
 
     /**

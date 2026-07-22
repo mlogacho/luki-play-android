@@ -162,16 +162,28 @@ private class FakeTokenStore : TokenStore {
     private var refresh: String? = null
     private var user: String? = null
     private var name: String? = null
+    private var mail: String? = null
+    private var userPlan: String? = null
 
     override fun accessToken(): String? = access
     override fun refreshToken(): String? = refresh
     override fun userId(): String? = user
     override fun displayName(): String? = name
+    override fun email(): String? = mail
+    override fun plan(): String? = userPlan
     override fun deviceId(): String = "test-device"
     override fun adoptDeviceId(candidate: String): String = "test-device"
 
-    override fun save(accessToken: String, refreshToken: String?, userId: String?, displayName: String?) {
+    override fun save(
+        accessToken: String,
+        refreshToken: String?,
+        userId: String?,
+        displayName: String?,
+        email: String?,
+        plan: String?,
+    ) {
         access = accessToken; refresh = refreshToken; user = userId; name = displayName
+        mail = email; userPlan = plan
     }
 
     override fun updateTokens(accessToken: String, refreshToken: String?) {
@@ -179,6 +191,6 @@ private class FakeTokenStore : TokenStore {
     }
 
     override fun clear() {
-        access = null; refresh = null; user = null; name = null
+        access = null; refresh = null; user = null; name = null; mail = null; userPlan = null
     }
 }

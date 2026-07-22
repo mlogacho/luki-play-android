@@ -23,6 +23,10 @@ class FakeTokenStore(
         private set
     @Volatile var name: String? = initialDisplayName
         private set
+    @Volatile var mail: String? = null
+        private set
+    @Volatile var userPlan: String? = null
+        private set
 
     var saveCount = 0
         private set
@@ -35,6 +39,8 @@ class FakeTokenStore(
     override fun refreshToken(): String? = refresh
     override fun userId(): String? = user
     override fun displayName(): String? = name
+    override fun email(): String? = mail
+    override fun plan(): String? = userPlan
     override fun deviceId(): String = fixedDeviceId
 
     /** El id es fijo en el fake: siempre "existe", así que nunca adopta. */
@@ -45,11 +51,15 @@ class FakeTokenStore(
         refreshToken: String?,
         userId: String?,
         displayName: String?,
+        email: String?,
+        plan: String?,
     ) {
         access = accessToken
         refresh = refreshToken ?: refresh
         user = userId ?: user
         name = displayName ?: name
+        mail = email ?: mail
+        userPlan = plan ?: userPlan
         saveCount++
     }
 
@@ -64,6 +74,8 @@ class FakeTokenStore(
         refresh = null
         user = null
         name = null
+        mail = null
+        userPlan = null
         clearCount++
     }
 }

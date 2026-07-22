@@ -35,17 +35,27 @@ class SecureTokenStore @Inject constructor(
     override fun displayName(): String? =
         prefs.getString(Constants.KEY_DISPLAY_NAME, null)?.takeIf { it.isNotBlank() }
 
+    override fun email(): String? =
+        prefs.getString(Constants.KEY_EMAIL, null)?.takeIf { it.isNotBlank() }
+
+    override fun plan(): String? =
+        prefs.getString(Constants.KEY_PLAN, null)?.takeIf { it.isNotBlank() }
+
     override fun save(
         accessToken: String,
         refreshToken: String?,
         userId: String?,
         displayName: String?,
+        email: String?,
+        plan: String?,
     ) {
         prefs.edit().apply {
             putString(Constants.KEY_ACCESS_TOKEN, accessToken)
             refreshToken?.let { putString(Constants.KEY_REFRESH_TOKEN, it) }
             userId?.takeIf { it.isNotBlank() }?.let { putString(Constants.KEY_USER_ID, it) }
             displayName?.takeIf { it.isNotBlank() }?.let { putString(Constants.KEY_DISPLAY_NAME, it) }
+            email?.takeIf { it.isNotBlank() }?.let { putString(Constants.KEY_EMAIL, it) }
+            plan?.takeIf { it.isNotBlank() }?.let { putString(Constants.KEY_PLAN, it) }
             apply()
         }
     }
@@ -64,6 +74,8 @@ class SecureTokenStore @Inject constructor(
             .remove(Constants.KEY_REFRESH_TOKEN)
             .remove(Constants.KEY_USER_ID)
             .remove(Constants.KEY_DISPLAY_NAME)
+            .remove(Constants.KEY_EMAIL)
+            .remove(Constants.KEY_PLAN)
             .apply()
     }
 

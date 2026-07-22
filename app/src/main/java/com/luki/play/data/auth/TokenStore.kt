@@ -22,12 +22,23 @@ interface TokenStore {
     /** Nombre legible del usuario o `null`. */
     fun displayName(): String?
 
+    /** Correo del usuario o `null`. Lo muestra la tarjeta del menú de cuenta. */
+    fun email(): String?
+
+    /**
+     * Plan contratado en minúsculas (`lukiplay`, `premium`, …) o `null`.
+     * Define el color del avatar, igual que `PLAN_COLORS` en el portal.
+     */
+    fun plan(): String?
+
     /** Persiste un nuevo par de tokens y datos asociados. */
     fun save(
         accessToken: String,
         refreshToken: String?,
         userId: String?,
         displayName: String?,
+        email: String?,
+        plan: String?,
     )
 
     /** Reemplaza únicamente los tokens (usado tras refresh). */
