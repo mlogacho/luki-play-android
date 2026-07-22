@@ -33,6 +33,16 @@ enum class DrmScheme { NONE, WIDEVINE }
  * @param licenseUrl        URL del servidor de licencias DRM. Requerido si [drmScheme] != NONE.
  * @param licenseHeaders    Headers extra (auth, x-customdata) para la petición de licencia.
  * @param drmMultiSession   Para live DRM con rotación de claves: habilita renegociación.
+ * @param channelId         Id del canal, necesario para abrir la sesión de stream.
+ * @param ownsStreamSession Si el reproductor debe abrir y cerrar él la sesión
+ *                          de stream (`/public/streams/...`).
+ *
+ *                          **Solo el camino nativo pone esto en true.** Cuando
+ *                          el reproductor se lanza desde [com.luki.play.bridge.LukiBridge],
+ *                          la sesión ya la abrió el portal dentro del WebView:
+ *                          abrir otra gastaría DOS cupos del plan por un único
+ *                          visionado y podría disparar el límite con un solo
+ *                          dispositivo.
  */
 @Parcelize
 data class StreamConfig(
@@ -46,7 +56,15 @@ data class StreamConfig(
     val licenseUrl: String? = null,
     val licenseHeaders: Map<String, String> = emptyMap(),
     val drmMultiSession: Boolean = false,
+    val channelId: String? = null,
+    val ownsStreamSession: Boolean = false,
 ) : Parcelable {
+
+    /**
+     * true si este reproductor debe gestionar la sesión de stream. Exige
+     * [channelId]: sin él no hay nada que abrir.
+     */
+    fun managesStreamSession(): Boolean = ownsStreamSession && !channelId.isNullOrBlank()
 
     /**
      * Devuelve el [ManifestType] efectivo:

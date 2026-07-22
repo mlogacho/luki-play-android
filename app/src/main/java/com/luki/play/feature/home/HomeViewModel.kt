@@ -8,8 +8,11 @@ import com.luki.play.data.catalog.domain.Channel
 import com.luki.play.data.catalog.domain.Slider
 import com.luki.play.data.auth.TokenStore
 import com.luki.play.data.favorites.FavoritesRepository
+import com.luki.play.data.streams.StreamSessionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -61,6 +64,7 @@ private data class TransientState(
 class HomeViewModel @Inject constructor(
     private val repository: ChannelsRepository,
     private val favoritesRepository: FavoritesRepository,
+    private val streamSessionManager: StreamSessionManager,
     private val tokenStore: TokenStore,
 ) : ViewModel() {
 
@@ -102,8 +106,26 @@ class HomeViewModel @Inject constructor(
         initialValue = HomeUiState(isRefreshing = true),
     )
 
+    /**
+     * Aviso de tope de streams alcanzado. Se muestra unos segundos y
+     * desaparece solo, igual que el banner del portal.
+     */
+    private val _streamLimitBanner = MutableStateFlow(false)
+    val streamLimitBanner: StateFlow<Boolean> = _streamLimitBanner.asStateFlow()
+
     init {
         refresh()
+        viewModelScope.launch {
+            streamSessionManager.limitReached.collect {
+                _streamLimitBanner.value = true
+                delay(STREAM_LIMIT_BANNER_MS)
+                _streamLimitBanner.value = false
+            }
+        }
+    }
+
+    fun dismissStreamLimitBanner() {
+        _streamLimitBanner.value = false
     }
 
     /** Marca o desmarca un canal. La reversión ante error la hace el repo. */
@@ -130,5 +152,6 @@ class HomeViewModel @Inject constructor(
 
     companion object {
         private const val STOP_TIMEOUT_MS = 5_000L
+        private const val STREAM_LIMIT_BANNER_MS = 5_000L
     }
 }

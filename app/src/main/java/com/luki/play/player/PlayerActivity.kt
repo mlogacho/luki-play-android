@@ -13,9 +13,14 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.core.content.IntentCompat
 import androidx.core.view.WindowCompat
 import com.luki.play.R
+import com.luki.play.data.streams.StreamSessionManager
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 import com.luki.play.databinding.ActivityPlayerBinding
 
 /**
@@ -49,7 +54,17 @@ import com.luki.play.databinding.ActivityPlayerBinding
  * ✅ BroadcastReceiver listens for ACTION_STOP_PLAYBACK (from LukiBridge).
  * ✅ onUserLeaveHint pauses playback gracefully.
  */
+@AndroidEntryPoint
 class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
+
+    /** Sesión de stream — solo se usa si la config dice que somos su dueño. */
+    @Inject lateinit var streamSessionManager: StreamSessionManager
+
+    /** true si abrimos sesión en este reproductor; decide si hay que cerrarla. */
+    private var managingStreamSession = false
+
+    /** Distingue el primer onStart del que sigue a un paso por background. */
+    private var wasInBackground = false
 
     // ------------------------------------------------------------------ //
     //  Companion
@@ -134,6 +149,18 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
         setupRetryButton()
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Al volver de background: heartbeat inmediato y, si el lease caducó
+        // mientras la app no estaba en primer plano, se reabre. NO se cierra
+        // la sesión al irse a background — el portal comprobó que hacerlo
+        // cortaba la reproducción a quien solo apagaba la pantalla un momento.
+        val channelId = activeStreamSessionChannelId() ?: return
+        if (!wasInBackground) return
+        wasInBackground = false
+        lifecycleScope.launch { streamSessionManager.onForeground(channelId) }
+    }
+
     override fun onResume() {
         super.onResume()
         playerManager?.resume()
@@ -142,6 +169,11 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
     override fun onPause() {
         super.onPause()
         playerManager?.saveAndPause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        wasInBackground = true
     }
 
     override fun onUserLeaveHint() {
@@ -155,6 +187,20 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
         playerManager?.release()
         playerManager = null
         unregisterReceiver(stopReceiver)
+        // Libera el cupo del plan al instante en vez de esperar a que el
+        // backend caduque el lease por falta de heartbeat.
+        if (managingStreamSession) streamSessionManager.close()
+    }
+
+    /**
+     * Id del canal si ESTE reproductor es dueño de la sesión de stream.
+     *
+     * Devuelve null cuando el reproductor lo lanzó el bridge: ahí la sesión
+     * ya la abrió el portal y tocarla gastaría un segundo cupo.
+     */
+    private fun activeStreamSessionChannelId(): String? {
+        val config = viewModel.activeConfig() ?: readConfig(intent) ?: return null
+        return config.channelId?.takeIf { config.managesStreamSession() }
     }
 
     // ------------------------------------------------------------------ //
@@ -229,7 +275,29 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
         if (resetSavedPosition) viewModel.saveCurrentPosition(0L)
         viewModel.setActiveConfig(config)
         lastLoadAtMs = SystemClock.elapsedRealtime()
+        openStreamSessionIfNeeded(config)
         (playerManager ?: createManager()).load(config)
+    }
+
+    /**
+     * Abre la sesión que aplica el tope de streams simultáneos del plan.
+     *
+     * Solo cuando este reproductor es su dueño (camino nativo); si vino del
+     * bridge, la sesión ya la abrió el portal. Se lanza en paralelo a la carga
+     * igual que el portal: si el backend responde 429 se cierra el
+     * reproductor; cualquier otro fallo no interrumpe la reproducción.
+     */
+    private fun openStreamSessionIfNeeded(config: StreamConfig) {
+        val channelId = config.channelId
+        if (!config.managesStreamSession() || channelId == null) return
+        managingStreamSession = true
+        lifecycleScope.launch {
+            when (streamSessionManager.open(channelId)) {
+                is StreamSessionManager.OpenResult.LimitReached -> finish()
+                is StreamSessionManager.OpenResult.Failed,
+                is StreamSessionManager.OpenResult.Started -> Unit
+            }
+        }
     }
 
     /** Parsea el [StreamConfig] del Intent; null si falta o la URL está vacía. */

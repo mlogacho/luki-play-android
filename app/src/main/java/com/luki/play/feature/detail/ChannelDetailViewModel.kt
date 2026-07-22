@@ -104,6 +104,10 @@ class ChannelDetailViewModel @Inject constructor(
                         // actual es señal en claro.
                         drmScheme     = DrmScheme.NONE,
                         licenseUrl    = null,
+                        // Camino nativo: aquí no hay portal que abra la sesión
+                        // de stream, así que la abre el propio reproductor.
+                        channelId         = channelId,
+                        ownsStreamSession = true,
                     )
                     _state.value = _state.value.copy(isLoadingStream = false, playRequest = cfg)
                 }

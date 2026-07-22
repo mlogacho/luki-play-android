@@ -38,8 +38,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material3.CircularProgressIndicator
@@ -111,6 +113,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val streamLimitBanner by viewModel.streamLimitBanner.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -147,6 +150,10 @@ fun HomeScreen(
                     }
                 },
             )
+
+            if (streamLimitBanner) {
+                StreamLimitBanner(onDismiss = viewModel::dismissStreamLimitBanner)
+            }
 
             Box(Modifier.fillMaxSize()) {
                 LazyColumn(
@@ -801,5 +808,44 @@ private fun ChannelSection(
                 )
             }
         }
+    }
+}
+
+/**
+ * Aviso de tope de streams simultáneos, calcado del banner del portal
+ * (fondo #7f1d1d sobre texto #fca5a5). Sale al chocar con el límite y se va
+ * solo a los pocos segundos.
+ */
+@Composable
+private fun StreamLimitBanner(onDismiss: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF7F1D1D))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.ErrorOutline,
+            contentDescription = null,
+            tint = Color(0xFFFCA5A5),
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = "Has alcanzado el límite de streams simultáneos en tu plan.",
+            color = Color(0xFFFCA5A5),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = Icons.Filled.Close,
+            contentDescription = "Cerrar aviso",
+            tint = Color(0xFFFCA5A5),
+            modifier = Modifier
+                .size(18.dp)
+                .clickable(onClick = onDismiss),
+        )
     }
 }
