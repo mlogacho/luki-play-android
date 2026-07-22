@@ -97,11 +97,13 @@ class ChannelDetailViewModel @Inject constructor(
             runCatching { api.getChannelStream(channelId) }
                 .onSuccess { dto ->
                     val cfg = StreamConfig(
-                        url           = dto.url,
+                        url           = dto.streamUrl,
                         title         = _state.value.channel?.name.orEmpty(),
-                        manifestType  = parseManifestType(dto.manifestType),
-                        drmScheme     = if (dto.drmScheme.equals("WIDEVINE", ignoreCase = true)) DrmScheme.WIDEVINE else DrmScheme.NONE,
-                        licenseUrl    = dto.licenseUrl,
+                        manifestType  = manifestTypeOf(dto.streamUrl),
+                        // El endpoint no devuelve datos de DRM: el catálogo
+                        // actual es señal en claro.
+                        drmScheme     = DrmScheme.NONE,
+                        licenseUrl    = null,
                     )
                     _state.value = _state.value.copy(isLoadingStream = false, playRequest = cfg)
                 }
@@ -137,10 +139,20 @@ class ChannelDetailViewModel @Inject constructor(
             "No se pudo obtener la señal. Intenta de nuevo."
     }
 
-    private fun parseManifestType(raw: String?): ManifestType = when (raw?.uppercase()) {
-        "HLS"  -> ManifestType.HLS
-        "DASH" -> ManifestType.DASH
-        else   -> ManifestType.OTHER
+    /**
+     * Deduce el tipo de manifiesto de la URL, ya que el backend no lo envía.
+     *
+     * Se mira solo la ruta: una query string puede traer un `.mpd` o un
+     * `.m3u8` dentro de un parámetro (tokens de CDN, por ejemplo) y
+     * confundir la detección.
+     */
+    private fun manifestTypeOf(url: String): ManifestType {
+        val path = url.substringBefore('?').substringBefore('#').lowercase()
+        return when {
+            path.endsWith(".m3u8") -> ManifestType.HLS
+            path.endsWith(".mpd")  -> ManifestType.DASH
+            else                   -> ManifestType.OTHER
+        }
     }
 
     companion object { private const val TAG = "ChannelDetailVM" }

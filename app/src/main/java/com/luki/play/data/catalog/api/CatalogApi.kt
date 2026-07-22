@@ -27,13 +27,22 @@ data class SliderDto(
     @Json(name = "actionValue") val actionValue: String?,
 )
 
+/**
+ * Respuesta de `GET /public/canales/{id}/stream`.
+ *
+ * El backend devuelve EXACTAMENTE `{ "streamUrl": "..." }` — nada más
+ * (`public.controller.ts`: `return { streamUrl: canal.streamUrl }`). El DTO
+ * anterior era especulativo: pedía `url` y además `sessionId`,
+ * `manifestType`, `drmScheme` y `licenseUrl`, campos que ese endpoint nunca
+ * ha enviado. Como `url` era obligatorio, Moshi rompía con "Required value
+ * 'url' missing" y NINGÚN canal llegaba a reproducirse.
+ *
+ * Corolario: por aquí no viaja información de DRM. El tipo de manifiesto se
+ * deduce de la extensión de la URL.
+ */
 @JsonClass(generateAdapter = true)
 data class StreamDto(
-    @Json(name = "url")        val url: String,
-    @Json(name = "sessionId")  val sessionId: String?,
-    @Json(name = "manifestType") val manifestType: String?,
-    @Json(name = "drmScheme")  val drmScheme: String?,
-    @Json(name = "licenseUrl") val licenseUrl: String?,
+    @Json(name = "streamUrl") val streamUrl: String,
 )
 
 /**

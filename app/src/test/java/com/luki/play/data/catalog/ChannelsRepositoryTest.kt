@@ -105,7 +105,7 @@ private class FakeCatalogApi(
     }
     override suspend fun getSliders(): List<SliderDto> = sliders
     override suspend fun getChannelStream(channelId: String): StreamDto =
-        StreamDto("https://x/y.m3u8", null, "HLS", null, null)
+        StreamDto("https://x/y.m3u8")
 }
 
 private class FakeCatalogDao(
