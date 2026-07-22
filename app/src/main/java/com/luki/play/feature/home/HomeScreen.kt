@@ -2,6 +2,14 @@
 package com.luki.play.feature.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.luki.play.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,14 +66,25 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background,
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // Fondo del portal: degradado vertical rich → deep → void con el
+            // quiebre al 35 % (home.tsx: LinearGradient locations [0, .35, 1]).
+            .background(
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0f    to HomePalette.GradientTop,
+                        0.35f to HomePalette.GradientMid,
+                        1f    to HomePalette.GradientBottom,
+                    )
+                )
+            )
     ) {
         Box(Modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 item {
@@ -82,31 +101,67 @@ fun HomeScreen(
             if (state.isRefreshing && state.rows.isEmpty()) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = HomePalette.Accent,
                 )
             }
         }
     }
 }
 
+/** Colores del home del portal (`(tabs)/home.tsx`). */
+private object HomePalette {
+    val GradientTop    = Color(0xFF1E0B45)
+    val GradientMid    = Color(0xFF0D0520)
+    val GradientBottom = Color(0xFF05020C)
+    val Header         = Color(0xFF1E0B45)
+    val HeaderBorder   = Color(0x0FFFFFFF)   // rgba(255,255,255,0.06)
+    val Accent         = Color(0xFFFFC107)   // ACCENT del home
+    val OnAccent       = Color(0xFF140026)
+}
+
+/**
+ * Barra superior del portal: fondo #1E0B45 de 43dp, logo horizontal a la
+ * izquierda y acciones a la derecha. Respeta el inset de la barra de estado
+ * — sin eso el logo quedaba debajo del reloj y de los iconos del sistema.
+ *
+ * Divergencia consciente: el portal pone aquí un avatar con menú y los
+ * enlaces de sección; se replican el fondo y el logo, y se conservan las
+ * acciones Buscar/Salir hasta que existan esas dos piezas nativas.
+ */
 @Composable
 private fun LukiTopBar(onSearchClick: () -> Unit, onLogoutClick: () -> Unit) {
-    androidx.compose.foundation.layout.Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .background(HomePalette.Header)
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
-        Text(
-            text = "Luki Play",
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.weight(1f),
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(43.dp)
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Image(
+                painter = painterResource(R.drawable.luki_logo_h),
+                contentDescription = "Luki Play",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .height(20.dp)
+                    .weight(1f, fill = false),
+            )
+            Spacer(Modifier.weight(1f))
+            TopBarAction(text = "Buscar", onClick = onSearchClick)
+            TopBarAction(text = "Salir", onClick = onLogoutClick)
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(HomePalette.HeaderBorder)
         )
-        TopBarAction(text = "Buscar", onClick = onSearchClick)
-        TopBarAction(text = "Salir", onClick = onLogoutClick)
     }
 }
 
@@ -114,7 +169,7 @@ private fun LukiTopBar(onSearchClick: () -> Unit, onLogoutClick: () -> Unit) {
 private fun TopBarAction(text: String, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = Color(0x1FFFFFFF),
         modifier = Modifier.clickable(onClick = onClick),
     ) {
         Text(
