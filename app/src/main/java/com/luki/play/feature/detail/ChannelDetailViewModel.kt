@@ -16,7 +16,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 
 data class ChannelDetailUiState(
@@ -53,15 +55,28 @@ class ChannelDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Pide reproducir, exigiendo el PIN si el canal está bloqueado.
+     *
+     * ESPERA a que el canal esté cargado antes de decidir. Antes se leía
+     * `_state.value.channel` directamente y, si la carga aún no había
+     * terminado, `null?.parentalLocked == true` daba `false`: el control
+     * parental se saltaba entero. Con la carga en curso bastaba con pulsar
+     * rápido para colarse.
+     */
     fun requestPlay() {
-        val channel = _state.value.channel
-        // Si el canal está bloqueado por control parental y existe PIN configurado,
-        // exigir verificación antes de pedir el stream.
-        if (channel?.parentalLocked == true && parental.hasPin()) {
-            _state.value = _state.value.copy(parentalGateRequired = true)
-            return
+        viewModelScope.launch {
+            val channel = _state.value.channel
+                ?: repository.getChannelById(channelId)?.also { loaded ->
+                    _state.value = _state.value.copy(channel = loaded)
+                }
+
+            if (channel?.parentalLocked == true && parental.hasPin()) {
+                _state.value = _state.value.copy(parentalGateRequired = true)
+                return@launch
+            }
+            fetchStream()
         }
-        fetchStream()
     }
 
     /**
@@ -94,7 +109,7 @@ class ChannelDetailViewModel @Inject constructor(
                     Timber.tag(TAG).w(t, "stream request failed")
                     _state.value = _state.value.copy(
                         isLoadingStream = false,
-                        errorMessage = t.message ?: "Error obteniendo stream",
+                        errorMessage = userMessageFor(t),
                     )
                 }
         }
@@ -102,6 +117,24 @@ class ChannelDetailViewModel @Inject constructor(
 
     fun consumePlayRequest() {
         _state.value = _state.value.copy(playRequest = null)
+    }
+
+    /**
+     * Traduce el fallo a algo que el usuario pueda entender y accionar.
+     *
+     * Antes se mostraba `t.message` tal cual, así que en pantalla salía
+     * "HTTP 401 Unauthorized". El texto de red repite el del login para que
+     * la app hable igual en todas partes.
+     */
+    private fun userMessageFor(t: Throwable): String = when {
+        t is IOException ->
+            "Sin conexión. Verifica tu internet e intenta de nuevo."
+        t is HttpException && t.code() in listOf(401, 403) ->
+            "Tu sesión expiró. Vuelve a iniciar sesión."
+        t is HttpException && t.code() == 404 ->
+            "Este canal ya no está disponible."
+        else ->
+            "No se pudo obtener la señal. Intenta de nuevo."
     }
 
     private fun parseManifestType(raw: String?): ManifestType = when (raw?.uppercase()) {

@@ -20,7 +20,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.luki.play.data.auth.AuthRepository
 import com.luki.play.data.auth.SessionState
-import com.luki.play.feature.detail.ChannelDetailScreen
+import com.luki.play.feature.detail.ChannelLaunchScreen
 import com.luki.play.feature.downloads.DownloadsScreen
 import com.luki.play.feature.favorites.FavoritesScreen
 import com.luki.play.feature.home.HomeScreen
@@ -152,7 +152,7 @@ fun LukiNavGraph(
             }
 
             composable(LukiRoutes.DETAIL) {
-                ChannelDetailScreen(
+                ChannelLaunchScreen(
                     onPlay = onLaunchPlayer,
                     onBack = { navController.popBackStack() },
                     onRequestParentalGate = triggerParentalGate,
