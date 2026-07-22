@@ -66,6 +66,7 @@ fun SearchScreen(
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
+    val favorites by viewModel.favorites.collectAsStateWithLifecycle()
 
     val horizontalPadding = rememberRowPadding()
     val cardWidth = rememberChannelCardWidth()
@@ -110,7 +111,7 @@ fun SearchScreen(
                         LukiChannelCard(
                             channel = channel,
                             width = cardWidth,
-                            isFavorite = false,
+                            isFavorite = channel.id in favorites,
                             onClick = { selectedChannelId = channel.id },
                         )
                     }
@@ -122,14 +123,14 @@ fun SearchScreen(
         if (selected != null) {
             ChannelActionPanel(
                 channel = selected,
-                isFavorite = false,
+                isFavorite = selected.id in favorites,
                 onPlay = {
                     selectedChannelId = null
                     onChannelClick(selected)
                 },
-                // Marcar favoritos desde la búsqueda exigiría cruzar aquí el
-                // estado de favoritos; hoy el panel solo reproduce o cierra.
-                onToggleFavorite = { },
+                onToggleFavorite = {
+                    viewModel.toggleFavorite(selected.id, selected.id !in favorites)
+                },
                 onClose = { selectedChannelId = null },
             )
         }

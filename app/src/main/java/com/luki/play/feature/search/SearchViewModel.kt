@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.luki.play.data.catalog.ChannelsRepository
 import com.luki.play.data.catalog.domain.Channel
+import com.luki.play.data.favorites.FavoritesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SearchUiState(
@@ -25,7 +27,15 @@ data class SearchUiState(
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val repository: ChannelsRepository,
+    private val favoritesRepository: FavoritesRepository,
 ) : ViewModel() {
+
+    /**
+     * Favoritos, para que la card muestre el corazón y el panel ofrezca la
+     * acción correcta. Antes iban cableados en falso aquí, así que un canal
+     * favorito aparecía sin marcar en Buscar y con marca en Inicio.
+     */
+    val favorites: StateFlow<Set<String>> = favoritesRepository.favorites
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
@@ -43,6 +53,10 @@ class SearchViewModel @Inject constructor(
         )
 
     fun onQueryChange(q: String) { _query.value = q }
+
+    fun toggleFavorite(channelId: String, favorite: Boolean) {
+        viewModelScope.launch { favoritesRepository.toggle(channelId, favorite) }
+    }
 
     companion object {
         private const val DEBOUNCE_MS = 250L

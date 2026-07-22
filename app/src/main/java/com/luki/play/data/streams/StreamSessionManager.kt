@@ -43,11 +43,17 @@ class StreamSessionManager internal constructor(
     private val api: StreamSessionApi,
     private val tokenStore: TokenStore,
     private val ioDispatcher: CoroutineDispatcher,
+    /** Scope del heartbeat; inyectable para poder avanzar el tiempo en tests. */
+    private val scope: CoroutineScope,
 ) {
 
     @Inject
-    constructor(api: StreamSessionApi, tokenStore: TokenStore) :
-        this(api, tokenStore, Dispatchers.IO)
+    constructor(api: StreamSessionApi, tokenStore: TokenStore) : this(
+        api = api,
+        tokenStore = tokenStore,
+        ioDispatcher = Dispatchers.IO,
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    )
 
     /** Resultado de abrir sesión; el 429 se distingue porque tiene UI propia. */
     sealed interface OpenResult {
@@ -56,8 +62,6 @@ class StreamSessionManager internal constructor(
         data object LimitReached : OpenResult
         data class Failed(val cause: Throwable) : OpenResult
     }
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _limitReached = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
@@ -160,11 +164,16 @@ class StreamSessionManager internal constructor(
                 Timber.tag(TAG).w("heartbeat falló ($failures/$MAX_HEARTBEAT_FAILURES)")
                 if (failures < MAX_HEARTBEAT_FAILURES) continue
 
-                // Recuperación: cerrar el lease muerto y abrir uno nuevo. Se
-                // sale del bucle porque open() arranca su propio heartbeat.
+                // Recuperación: cerrar el lease muerto y abrir uno nuevo.
+                //
+                // La reapertura va en OTRA corrutina a propósito. open()
+                // empieza por stopHeartbeat(), que cancela `heartbeatJob`; si
+                // se llamara aquí dentro se estaría cancelando a sí misma a
+                // mitad y la reapertura moría con JobCancellationException,
+                // dejando al usuario reproduciendo sin lease.
                 Timber.tag(TAG).w("demasiados fallos; recuperando sesión")
                 withContext(ioDispatcher) { runCatching { api.stop(id) } }
-                open(channelId)
+                scope.launch { open(channelId) }
                 return@launch
             }
         }

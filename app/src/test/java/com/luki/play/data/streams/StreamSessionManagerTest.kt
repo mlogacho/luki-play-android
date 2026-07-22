@@ -5,7 +5,10 @@ import com.luki.play.data.auth.FakeTokenStore
 import com.luki.play.data.streams.api.StartStreamRequest
 import com.luki.play.data.streams.api.StartStreamResponse
 import com.luki.play.data.streams.api.StreamSessionApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import okhttp3.MediaType.Companion.toMediaType
@@ -26,19 +29,32 @@ class StreamSessionManagerTest {
     private class FakeStreamApi(
         var startCode: Int = 200,
         var stopCode: Int = 204,
+        var heartbeatFails: Boolean = false,
     ) : StreamSessionApi {
 
         var startCalls = mutableListOf<StartStreamRequest>()
         var stopCalls = mutableListOf<String>()
+        var heartbeatCalls = 0
         var nextStreamId = "sesion-1"
 
         override suspend fun start(body: StartStreamRequest): StartStreamResponse {
+            // Suspende de verdad: una llamada de red tiene punto de suspensión y
+            // ahí es donde se observa la cancelación. Un fake que devuelve al
+            // instante NO reproduce el bug de la recuperación cancelándose a sí
+            // misma — el test pasaba con el código roto.
+            delay(10)
             startCalls += body
             if (startCode !in 200..299) throw httpException(startCode)
             return StartStreamResponse(nextStreamId)
         }
 
-        override suspend fun heartbeat(streamId: String) = Response.success(Unit)
+        override suspend fun heartbeat(streamId: String): Response<Unit> {
+            heartbeatCalls++
+            // Fallo de red: es reintentable, que es el camino que lleva a la
+            // recuperación tras MAX_HEARTBEAT_FAILURES.
+            if (heartbeatFails) throw java.io.IOException("sin red")
+            return Response.success(Unit)
+        }
 
         override suspend fun stop(streamId: String): Response<Unit> {
             stopCalls += streamId
@@ -54,6 +70,12 @@ class StreamSessionManagerTest {
         api = api,
         tokenStore = FakeTokenStore(),
         ioDispatcher = StandardTestDispatcher(testScheduler),
+        // backgroundScope y no `this`: el heartbeat es un bucle infinito y
+        // runTest espera a sus hijos, asi que pasarle el propio TestScope
+        // colgaba cada test hasta el timeout. backgroundScope corre en el mismo
+        // scheduler (el test sigue mandando en el tiempo virtual) y se cancela
+        // solo al terminar.
+        scope = backgroundScope,
     )
 
     @Test
@@ -101,7 +123,7 @@ class StreamSessionManagerTest {
         manager.open("canal-1")
 
         manager.close()
-        testScheduler.advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf("sesion-1"), api.stopCalls)
         assertNull(manager.currentStreamId)
@@ -124,6 +146,35 @@ class StreamSessionManagerTest {
             1,
             api.startCalls.map { it.deviceId }.distinct().size,
         )
+    }
+
+    @Test
+    fun `tras 3 heartbeats fallidos reabre la sesion de verdad`() = runTest {
+        // Regresión: la recuperación llamaba a open() DENTRO del propio job del
+        // heartbeat, y open() empieza por cancelar ese job — se cancelaba a si
+        // misma a mitad y la reapertura moria con JobCancellationException. El
+        // usuario se quedaba reproduciendo sin lease, que es justo lo que la
+        // sesion existe para evitar. Visto en emulador cuando al emulador se le
+        // cayo el DNS en background.
+        val api = FakeStreamApi()
+        val manager = manager(api)
+        manager.open("canal-1")
+        assertEquals(1, api.startCalls.size)
+
+        api.heartbeatFails = true
+        api.nextStreamId = "sesion-2"
+        // Tres intervalos de heartbeat, con holgura para los reintentos.
+        advanceTimeBy(70_000)
+        runCurrent()
+        advanceTimeBy(1_000)
+        runCurrent()
+
+        assertEquals(
+            "la recuperacion debe abrir una sesion nueva",
+            2,
+            api.startCalls.size,
+        )
+        assertEquals("sesion-2", manager.currentStreamId)
     }
 
     private companion object {
