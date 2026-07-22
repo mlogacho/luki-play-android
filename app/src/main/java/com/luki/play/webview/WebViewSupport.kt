@@ -16,21 +16,38 @@ import com.luki.play.R
 /**
  * Diagnóstico y respaldo del motor WebView del sistema.
  *
- * El portal web (lukiplay.com) usa optional chaining / nullish coalescing en
- * su bundle, sintaxis que requiere Chromium ≥ 80 (feb 2020) para *parsearse*;
- * en motores más viejos el bundle lanza SyntaxError y la página queda vacía
- * sin error de red. Antes de cargar el portal se comprueba la versión y, si
- * no alcanza, se muestra una pantalla accionable en lugar de un WebView mudo.
+ * El bundle del portal (lukiplay.com) usa sintaxis que motores viejos no
+ * pueden *parsear*: el archivo entero lanza SyntaxError y la página queda
+ * vacía, sin error de red. Antes de cargar el portal se comprueba la versión
+ * y, si no alcanza, se muestra una pantalla accionable en lugar de un WebView
+ * mudo.
  */
 object WebViewSupport {
 
     /**
      * Mínimo major de Chromium que el bundle del portal puede parsear.
-     * Verificado empíricamente: el portal renderiza en WebView 83 (emulador
-     * Android 11); el piso lo pone el optional chaining (80). No subir sin
-     * probar contra un motor real de la versión que se quiera excluir.
+     *
+     * 85 = operadores de asignación lógica (`??=`, `||=`, `&&=`), Chrome 85.
+     * Verificado el 2026-07-22 sobre el bundle en producción
+     * (`_expo/static/js/web/entry-*.js`): 4 ocurrencias, todas código real de
+     * Expo Router (p.ej. `u.layout??=[]`, `c||=s.StackRouter`), no dentro de
+     * strings — un análisis previo las descartó como falso positivo y por eso
+     * el piso quedó en 80. Confirmado en emulador Android 11 con WebView
+     * 83.0.4103.106: `Uncaught SyntaxError: Unexpected token '='` y pantalla
+     * en blanco.
+     *
+     * Los campos privados de clase (`#x`, Chrome 84) también aparecen, pero
+     * quedan cubiertos por este piso.
+     *
+     * Ojo: el bundle usa además `Object.hasOwn` (Chrome 93). Es API de
+     * runtime, no sintaxis, así que no impide parsear y solo fallaría en las
+     * rutas que la ejecuten; no se sube el piso a 93 sin evidencia de rotura
+     * real, para no bloquear equipos que funcionan. El BlankPageWatchdog
+     * cubre ese caso.
+     *
+     * No subir sin probar contra un motor real de la versión a excluir.
      */
-    const val MIN_CHROMIUM_MAJOR = 80
+    const val MIN_CHROMIUM_MAJOR = 85
 
     private const val WEBVIEW_PLAY_URI =
         "market://details?id=com.google.android.webview"
