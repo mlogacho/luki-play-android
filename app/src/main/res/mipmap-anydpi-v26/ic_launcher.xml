@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Icono adaptativo. El primer plano ya trae el logo recortado en círculo y
+    dimensionado a la zona segura (72dp de los 108dp del lienzo), así que:
+
+    - No lleva <inset>: el recorte y el centrado vienen resueltos en el PNG.
+    - El fondo es transparente a propósito. Cada launcher aplica su propia
+      máscara (círculo, squircle, cuadrado redondeado); con el fondo vacío,
+      lo único visible es el círculo del logo y el icono se ve redondo en
+      todos ellos, no solo en los que enmascaran en círculo.
+-->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@mipmap/ic_launcher_background_solid" />
-    <foreground>
-        <inset
-            android:drawable="@mipmap/ic_launcher_foreground_logo"
-            android:inset="18dp" />
-    </foreground>
+    <background android:drawable="@android:color/transparent" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground_logo" />
 </adaptive-icon>
