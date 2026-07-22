@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.media3.common.util.UnstableApi
 import com.luki.play.data.auth.AuthRepository
-import com.luki.play.data.profiles.ProfilesRepository
 import com.luki.play.player.PlayerActivity
 import com.luki.play.ui.LukiNavGraph
 import com.luki.play.ui.theme.LukiTheme
@@ -28,7 +27,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MobileComposeActivity : ComponentActivity() {
 
-    @Inject lateinit var profilesRepository: ProfilesRepository
     @Inject lateinit var authRepository: AuthRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,7 +45,6 @@ class MobileComposeActivity : ComponentActivity() {
                     onOpenPortal = {
                         startActivity(Intent(this, MobileMainActivity::class.java))
                     },
-                    profilesRepository = profilesRepository,
                     authRepository = authRepository,
                 )
             }

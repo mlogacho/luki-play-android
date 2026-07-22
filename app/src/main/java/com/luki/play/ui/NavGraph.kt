@@ -16,7 +16,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.luki.play.data.auth.AuthRepository
 import com.luki.play.data.auth.SessionState
-import com.luki.play.data.profiles.ProfilesRepository
 import com.luki.play.feature.detail.ChannelDetailScreen
 import com.luki.play.feature.downloads.DownloadsScreen
 import com.luki.play.feature.home.HomeScreen
@@ -24,7 +23,6 @@ import com.luki.play.feature.login.LoginScreen
 import com.luki.play.feature.login.RecoverPasswordScreen
 import com.luki.play.feature.login.SessionViewModel
 import com.luki.play.feature.parental.ParentalPinScreen
-import com.luki.play.feature.profiles.ProfilePickerScreen
 import com.luki.play.feature.search.SearchScreen
 import com.luki.play.player.StreamConfig
 import androidx.media3.common.util.UnstableApi
@@ -33,7 +31,6 @@ import androidx.media3.common.util.UnstableApi
 object LukiRoutes {
     const val LOGIN     = "login"
     const val RECOVER   = "recover"
-    const val PICKER    = "picker"
     const val HOME      = "home"
     const val SEARCH    = "search"
     const val DOWNLOADS = "downloads"
@@ -46,11 +43,17 @@ object LukiRoutes {
  *
  * Estructura:
  *  - Sin sesión (Anonymous) → LOGIN es startDestination.
- *  - Con sesión pero sin perfil activo → PICKER.
- *  - Una vez elegido → HOME y resto del flujo.
+ *  - Con sesión → HOME, igual que el portal.
  *  - Parental gate se inyecta como modal sobre cualquier destino vía un
  *    `Dialog` controlado por estado al nivel del NavGraph (evita una ruta
  *    dedicada que rompería el back-stack).
+ *
+ * Sin selector de perfiles: el portal no tiene esa función (sus destinos son
+ * Inicio / Buscar / Mi Lista, y `profile` es la cuenta del usuario, no un
+ * selector). PICKER se construyó de forma especulativa y además bloqueaba
+ * todo el arranque nativo, porque depende de `GET /auth/profiles`, que el
+ * backend responde 404. ProfilePickerScreen queda sin usar a la espera de
+ * decidir si se elimina.
  */
 @UnstableApi
 @Composable
@@ -58,7 +61,6 @@ fun LukiNavGraph(
     onLaunchPlayer: (StreamConfig) -> Unit,
     /** Abre el portal web — flujos que aún no tienen pantalla nativa. */
     onOpenPortal: () -> Unit,
-    profilesRepository: ProfilesRepository,
     authRepository: AuthRepository,
     navController: NavHostController = rememberNavController(),
 ) {
@@ -82,20 +84,16 @@ fun LukiNavGraph(
             parentalGate = ParentalGateRequest(onVerified, onDismissed)
         }
 
-    fun afterLoginDestination(): String =
-        if (profilesRepository.activeProfileId.value.isNullOrBlank()) LukiRoutes.PICKER
-        else LukiRoutes.HOME
-
     val startDestination =
         if (authRepository.current() is SessionState.Anonymous) LukiRoutes.LOGIN
-        else afterLoginDestination()
+        else LukiRoutes.HOME
 
     NavHost(navController = navController, startDestination = startDestination) {
 
         composable(LukiRoutes.LOGIN) {
             LoginScreen(
                 onLoggedIn = {
-                    navController.navigate(afterLoginDestination()) {
+                    navController.navigate(LukiRoutes.HOME) {
                         popUpTo(LukiRoutes.LOGIN) { inclusive = true }
                     }
                 },
@@ -113,19 +111,6 @@ fun LukiNavGraph(
                 // popBackStack en vez de navigate: el login sigue en el stack
                 // y así no se apilan instancias al ir y volver.
                 onBackToLogin = { navController.popBackStack(LukiRoutes.LOGIN, inclusive = false) },
-            )
-        }
-
-        composable(LukiRoutes.PICKER) {
-            ProfilePickerScreen(
-                onProfileChosen = {
-                    navController.navigate(LukiRoutes.HOME) {
-                        popUpTo(LukiRoutes.PICKER) { inclusive = true }
-                    }
-                },
-                onRequestParentalGate = { onVerified ->
-                    triggerParentalGate(onVerified) { /* dismiss */ }
-                },
             )
         }
 
