@@ -4,6 +4,7 @@ package com.luki.play.feature.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.luki.play.data.auth.AuthRepository
+import com.luki.play.data.favorites.FavoritesRepository
 import com.luki.play.data.profiles.ProfilesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ import javax.inject.Inject
 class SessionViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val profilesRepository: ProfilesRepository,
+    private val favoritesRepository: FavoritesRepository,
 ) : ViewModel() {
 
     private val _loggedOut = MutableStateFlow(false)
@@ -39,6 +41,10 @@ class SessionViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.logout()
             profilesRepository.clearActive()
+            // El repo de favoritos es singleton y guarda la lista en memoria:
+            // sin esto, el siguiente usuario vería marcados los canales del
+            // anterior hasta que un refresh los reemplazara.
+            favoritesRepository.clear()
             _loggedOut.value = true
         }
     }

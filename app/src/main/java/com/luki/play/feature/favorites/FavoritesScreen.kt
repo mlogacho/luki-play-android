@@ -1,13 +1,9 @@
-// feature/search/SearchScreen.kt
-package com.luki.play.feature.search
+// feature/favorites/FavoritesScreen.kt
+package com.luki.play.feature.favorites
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,10 +16,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,10 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,22 +44,25 @@ import com.luki.play.ui.rememberChannelCardWidth
 import com.luki.play.ui.rememberRowPadding
 
 /**
- * Búsqueda de canales.
+ * "Mi Lista".
  *
- * En el portal esta pestaña también es un placeholder, así que no hay diseño
- * que copiar: se compone con las piezas del home (fondo de marca, cabecera de
- * sección y la misma card) para que no desentone con el resto.
+ * En el portal esta pestaña es un placeholder — una etiqueta centrada, nunca
+ * se implementó. Aquí se construye de verdad reutilizando la card y la
+ * cabecera del home, así que el aspecto sigue siendo el del portal aunque la
+ * pantalla no exista allí.
+ *
+ * Se presenta en mosaico (no en fila deslizable) porque no hay categorías
+ * que separar: es una única lista del usuario.
  */
 @Composable
-fun SearchScreen(
+fun FavoritesScreen(
     onChannelClick: (Channel) -> Unit,
-    viewModel: SearchViewModel = hiltViewModel(),
+    viewModel: FavoritesViewModel = hiltViewModel(),
 ) {
-    val query by viewModel.query.collectAsStateWithLifecycle()
-    val results by viewModel.results.collectAsStateWithLifecycle()
-
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val horizontalPadding = rememberRowPadding()
     val cardWidth = rememberChannelCardWidth()
+
     var selectedChannelId by remember { mutableStateOf<String?>(null) }
 
     LukiGradientBackground {
@@ -79,23 +73,16 @@ fun SearchScreen(
                 .padding(top = 20.dp)
         ) {
             LukiSectionHeader(
-                title = "Buscar",
+                title = "Mi Lista",
                 horizontalPadding = horizontalPadding,
-                icon = Icons.Outlined.Search,
+                icon = Icons.Outlined.FavoriteBorder,
             )
             Spacer(Modifier.height(14.dp))
 
-            SearchField(
-                value = query,
-                onValueChange = viewModel::onQueryChange,
-                modifier = Modifier.padding(horizontal = horizontalPadding),
-            )
-            Spacer(Modifier.height(16.dp))
-
-            when {
-                query.length < 2 -> SearchHint("Escribe al menos 2 letras")
-                results.isEmpty() -> SearchHint("Sin resultados para \"$query\"")
-                else -> LazyVerticalGrid(
+            if (state.channels.isEmpty() && !state.isLoading) {
+                EmptyFavorites(Modifier.fillMaxSize())
+            } else {
+                LazyVerticalGrid(
                     columns = GridCells.Adaptive(cardWidth),
                     contentPadding = PaddingValues(
                         start = horizontalPadding,
@@ -106,11 +93,11 @@ fun SearchScreen(
                     verticalArrangement = Arrangement.spacedBy(ChannelCardGap),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(results, key = { it.id }) { channel ->
+                    items(state.channels, key = { it.id }) { channel ->
                         LukiChannelCard(
                             channel = channel,
                             width = cardWidth,
-                            isFavorite = false,
+                            isFavorite = true,
                             onClick = { selectedChannelId = channel.id },
                         )
                     }
@@ -118,18 +105,23 @@ fun SearchScreen(
             }
         }
 
-        val selected = selectedChannelId?.let { id -> results.firstOrNull { it.id == id } }
+        val selected = selectedChannelId?.let { id ->
+            state.channels.firstOrNull { it.id == id }
+        }
         if (selected != null) {
             ChannelActionPanel(
                 channel = selected,
-                isFavorite = false,
+                isFavorite = true,
                 onPlay = {
                     selectedChannelId = null
                     onChannelClick(selected)
                 },
-                // Marcar favoritos desde la búsqueda exigiría cruzar aquí el
-                // estado de favoritos; hoy el panel solo reproduce o cierra.
-                onToggleFavorite = { },
+                onToggleFavorite = {
+                    // Al quitarlo desaparece de la lista, así que el panel se
+                    // cierra: quedaría apuntando a un canal que ya no está.
+                    selectedChannelId = null
+                    viewModel.removeFavorite(selected.id)
+                },
                 onClose = { selectedChannelId = null },
             )
         }
@@ -137,56 +129,32 @@ fun SearchScreen(
 }
 
 @Composable
-private fun SearchField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0x1AFFFFFF))
-            .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(12.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+private fun EmptyFavorites(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = Icons.Outlined.Search,
+            imageVector = Icons.Outlined.FavoriteBorder,
             contentDescription = null,
             tint = LukiPalette.CardSubtitle,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(48.dp),
         )
-        Box(Modifier.weight(1f)) {
-            if (value.isEmpty()) {
-                Text(
-                    text = "Buscar canales",
-                    color = LukiPalette.CardSubtitle,
-                    fontSize = 15.sp,
-                )
-            }
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                textStyle = TextStyle(color = Color.White, fontSize = 15.sp),
-                cursorBrush = SolidColor(LukiPalette.Accent),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Tu lista está vacía",
+            color = Color.White,
+            fontSize = 17.sp,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Marca un canal como favorito desde Inicio y lo verás aquí.",
+            color = LukiPalette.CardSubtitle,
+            fontSize = 13.sp,
+            lineHeight = 20.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
-}
-
-@Composable
-private fun SearchHint(text: String) {
-    Text(
-        text = text,
-        color = LukiPalette.CardSubtitle,
-        fontSize = 13.sp,
-        textAlign = TextAlign.Center,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 32.dp, start = 32.dp, end = 32.dp),
-    )
 }

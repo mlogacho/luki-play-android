@@ -78,6 +78,14 @@ import com.luki.play.R
 import com.luki.play.data.catalog.domain.Channel
 import com.luki.play.data.catalog.domain.Slider
 import com.luki.play.data.catalog.domain.SliderAction
+import com.luki.play.ui.ChannelActionPanel
+import com.luki.play.ui.ChannelCardGap
+import com.luki.play.ui.LukiChannelCard
+import com.luki.play.ui.LukiGradientBackground
+import com.luki.play.ui.LukiPalette
+import com.luki.play.ui.LukiSectionHeader
+import com.luki.play.ui.rememberChannelCardWidth
+import com.luki.play.ui.rememberRowPadding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -90,10 +98,11 @@ import kotlinx.coroutines.launch
  *   ├─ HeroSlider a sangre, con la proporción real del arte
  *   └─ Secciones: cabecera con barra ámbar + fila de cards
  *
- * Qué se replica y qué no: el portal esconde su barra de pestañas cuando
- * corre en web (`Platform.OS === 'web'`), y hoy los usuarios ven justo esa
- * versión dentro del WebView. Por eso la referencia es el aspecto web
- * — enlaces de sección en el header, sin barra inferior.
+ * Qué se replica y qué no: el header sigue al portal en web (enlaces de
+ * sección + avatar), que es la versión que hoy ve el usuario dentro del
+ * WebView. La barra de pestañas, en cambio, SÍ se recupera (ver
+ * [com.luki.play.ui.LukiBottomBar]): el portal la esconde en web y eso
+ * dejaba Buscar y Mi Lista sin ninguna vía de acceso.
  */
 @Composable
 fun HomeScreen(
@@ -108,6 +117,9 @@ fun HomeScreen(
     var menuOpen by remember { mutableStateOf(false) }
     var confirmLogout by remember { mutableStateOf(false) }
     var activeSection by remember { mutableStateOf(TOP_SECTION_ID) }
+    // Se guarda el id, no el objeto: así el panel lee el estado de favorito
+    // ACTUAL y el corazón se actualiza en vivo sin cerrarlo.
+    var selectedChannelId by remember { mutableStateOf<String?>(null) }
 
     // Índice del primer item de contenido: el hero ocupa el 0 cuando existe.
     val firstSectionIndex = if (state.sliders.isNotEmpty()) 1 else 0
@@ -115,21 +127,7 @@ fun HomeScreen(
     // El portal aprieta la separación entre secciones en pantallas estrechas.
     val sectionSpacing = if (LocalConfiguration.current.screenWidthDp < 420) 30.dp else 40.dp
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            // Fondo del portal: degradado vertical rich → deep → void con el
-            // quiebre al 35 % (home.tsx: LinearGradient locations [0, .35, 1]).
-            .background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0f to HomePalette.GradientTop,
-                        0.35f to HomePalette.GradientMid,
-                        1f to HomePalette.GradientBottom,
-                    )
-                )
-            )
-    ) {
+    LukiGradientBackground {
         Column(Modifier.fillMaxSize()) {
             LukiNavbar(
                 user = state.user,
@@ -175,7 +173,14 @@ fun HomeScreen(
                         }
                     }
                     items(state.rows, key = { it.category }) { row ->
-                        ChannelSection(row = row, onChannelClick = onChannelClick)
+                        ChannelSection(
+                            row = row,
+                            favorites = state.favorites,
+                            // Pulsar una card abre el panel de acciones, no
+                            // lanza el canal: es la interacción del portal y el
+                            // único sitio donde se marca un favorito.
+                            onChannelSelected = { selectedChannelId = it.id },
+                        )
                     }
                 }
 
@@ -215,6 +220,27 @@ fun HomeScreen(
             }
         }
 
+        // Panel de acciones del canal seleccionado. Se resuelve por id contra
+        // el catálogo vivo para que el corazón refleje el estado del momento.
+        val selected = selectedChannelId?.let { id ->
+            state.rows.asSequence().flatMap { it.channels.asSequence() }
+                .firstOrNull { it.id == id }
+        }
+        if (selected != null) {
+            ChannelActionPanel(
+                channel = selected,
+                isFavorite = selected.id in state.favorites,
+                onPlay = {
+                    selectedChannelId = null
+                    onChannelClick(selected)
+                },
+                onToggleFavorite = {
+                    viewModel.toggleFavorite(selected.id, selected.id !in state.favorites)
+                },
+                onClose = { selectedChannelId = null },
+            )
+        }
+
         if (confirmLogout) {
             LogoutConfirmDialog(
                 onConfirm = {
@@ -229,25 +255,14 @@ fun HomeScreen(
 
 // ─── Paleta y métricas ────────────────────────────────────────────────────────
 
-/** Colores del home del portal (`(tabs)/home.tsx`). */
+/** Colores propios del home: navbar, menu de cuenta y dialogo de logout. */
 private object HomePalette {
-    val GradientTop = Color(0xFF1E0B45)
-    val GradientMid = Color(0xFF0D0520)
-    val GradientBottom = Color(0xFF05020C)
-
-    val Header = Color(0xFF1E0B45)
-    val HeaderBorder = Color(0x0FFFFFFF)     // rgba(255,255,255,0.06)
-
-    val Accent = Color(0xFFFFC107)           // ACCENT del home
-    val OnAccent = Color(0xFF140026)
+    val Header = LukiPalette.Header
+    val HeaderBorder = LukiPalette.HeaderBorder
+    val Accent = LukiPalette.Accent
+    val OnAccent = LukiPalette.OnAccent
 
     val NavInactive = Color(0x99FFFFFF)      // rgba(255,255,255,0.6)
-
-    val CardStrip = Color(0xFF12012A)        // franja oscura bajo el logo
-    val CardTitle = Color(0xFFFFFFFF)
-    val CardSubtitle = Color(0x6BFFFFFF)     // rgba(255,255,255,0.42)
-
-    val LiveRed = Color(0xFFE53935)
 
     val MenuSurface = Color(0xFF1A0D30)
     val MenuBorder = Color(0x17FFFFFF)       // rgba(255,255,255,0.09)
@@ -257,7 +272,6 @@ private object HomePalette {
     val MenuLogoutBg = Color(0x2EFF453A)     // rgba(255,69,58,0.18)
 
     val DialogSurface = Color(0xFF12082A)
-    val DialogBorder = Color(0x1AFFFFFF)     // rgba(255,255,255,0.1)
     val DialogBody = Color(0x80FFFFFF)       // rgba(255,255,255,0.5)
     val DialogDanger = Color(0xFFF87171)
     val DialogDangerBg = Color(0x26F87171)   // rgba(248,113,113,0.15)
@@ -266,7 +280,7 @@ private object HomePalette {
 
     val Scrim = Color(0xBF000000)            // rgba(0,0,0,0.75)
 
-    /** Colores de plan del portal; el ámbar es también el valor por defecto. */
+    /** Colores de plan del portal; el ambar es tambien el valor por defecto. */
     fun planColor(plan: String): Color = when (plan.lowercase()) {
         "lukiplay" -> Color(0xFFFFC107)
         "lukiplay go" -> Color(0xFF00E5FF)
@@ -546,96 +560,104 @@ private fun AccountMenu(
 /** Confirmación de cierre de sesión, calcada de `LogoutConfirmModal`. */
 @Composable
 private fun LogoutConfirmDialog(onConfirm: () -> Unit, onCancel: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(HomePalette.Scrim)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onCancel,
-            )
-            .padding(24.dp),
-        contentAlignment = Alignment.Center,
+    // Ventana propia por el mismo motivo que el panel de acciones: si no, el
+    // velo no llega a cubrir la barra de pestanas.
+    Popup(
+        alignment = Alignment.Center,
+        onDismissRequest = onCancel,
+        properties = PopupProperties(focusable = true),
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .widthIn(max = 360.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(HomePalette.DialogSurface)
+                .fillMaxSize()
+                .background(HomePalette.Scrim)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                ) { /* absorbe el toque: no debe cerrar el diálogo */ }
-                .padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(HomePalette.DialogDangerBg),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = null,
-                    tint = HomePalette.DialogDanger,
-                    modifier = Modifier.size(26.dp),
+                    onClick = onCancel,
                 )
-            }
-
-            Text(
-                text = "¿Cerrar sesión?",
-                color = Color.White,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Black,
-            )
-            Text(
-                text = "Tendrás que volver a ingresar con tus credenciales para acceder al contenido.",
-                color = HomePalette.DialogBody,
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
-                textAlign = TextAlign.Center,
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 360.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(HomePalette.DialogSurface)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { /* absorbe el toque: no debe cerrar el diálogo */ }
+                    .padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(HomePalette.DialogCancelBorder)
-                        .clickable(onClick = onCancel)
-                        .padding(vertical = 12.dp),
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(HomePalette.DialogDangerBg),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "Cancelar",
-                        color = HomePalette.DialogCancelText,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = null,
+                        tint = HomePalette.DialogDanger,
+                        modifier = Modifier.size(26.dp),
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(HomePalette.DialogDanger)
-                        .clickable(onClick = onConfirm)
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center,
+
+                Text(
+                    text = "¿Cerrar sesión?",
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    text = "Tendrás que volver a ingresar con tus credenciales para acceder al contenido.",
+                    color = HomePalette.DialogBody,
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Center,
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(
-                        text = "Cerrar sesión",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Black,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(HomePalette.DialogCancelBorder)
+                            .clickable(onClick = onCancel)
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "Cancelar",
+                            color = HomePalette.DialogCancelText,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(HomePalette.DialogDanger)
+                            .clickable(onClick = onConfirm)
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "Cerrar sesión",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
                 }
             }
         }
@@ -751,166 +773,33 @@ private const val DEFAULT_BANNER_RATIO = 1918f / 977f
 // ─── Secciones ────────────────────────────────────────────────────────────────
 
 @Composable
-private fun ChannelSection(row: ChannelRow, onChannelClick: (Channel) -> Unit) {
-    val screenWidth = LocalConfiguration.current.screenWidthDp
-    val horizontalPadding = if (screenWidth < 420) 16.dp else 20.dp
-    val cardWidth = (screenWidth * 0.32f).dp
+private fun ChannelSection(
+    row: ChannelRow,
+    favorites: Set<String>,
+    onChannelSelected: (Channel) -> Unit,
+) {
+    val horizontalPadding = rememberRowPadding()
+    val cardWidth = rememberChannelCardWidth()
 
     Column {
-        SectionHeader(title = row.category, horizontalPadding = horizontalPadding)
+        LukiSectionHeader(title = row.category, horizontalPadding = horizontalPadding)
         Spacer(Modifier.height(14.dp))
 
         val listState = rememberLazyListState()
         LazyRow(
             state = listState,
             contentPadding = PaddingValues(horizontal = horizontalPadding),
-            horizontalArrangement = Arrangement.spacedBy(CHANNEL_GAP),
+            horizontalArrangement = Arrangement.spacedBy(ChannelCardGap),
             flingBehavior = rememberSnapFlingBehavior(listState),
         ) {
             items(row.channels, key = { it.id }) { channel ->
-                ChannelCard(
+                LukiChannelCard(
                     channel = channel,
                     width = cardWidth,
-                    onClick = { onChannelClick(channel) },
+                    isFavorite = channel.id in favorites,
+                    onClick = { onChannelSelected(channel) },
                 )
             }
-        }
-    }
-}
-
-private val CHANNEL_GAP = 8.dp
-
-/** Barra ámbar + icono + título, tal como `SectionHeader` del portal. */
-@Composable
-private fun SectionHeader(title: String, horizontalPadding: Dp) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = horizontalPadding),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(
-            Modifier
-                .size(width = 3.dp, height = 20.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(HomePalette.Accent)
-        )
-        Icon(
-            imageVector = Icons.Outlined.GridView,
-            contentDescription = null,
-            tint = HomePalette.Accent,
-            modifier = Modifier.size(17.dp),
-        )
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/**
- * Card vertical estilo Apple TV: logo sobre fondo blanco arriba (70 % del
- * alto) y franja oscura abajo con el nombre y el programa/categoría.
- *
- * Alto = ancho × 1,38 y zona blanca = 70 % de ese alto, igual que el portal.
- */
-@Composable
-private fun ChannelCard(
-    channel: Channel,
-    width: Dp,
-    onClick: () -> Unit,
-) {
-    val height = width * 1.38f
-    val thumbHeight = height * 0.70f
-
-    Column(
-        modifier = Modifier
-            .width(width)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.White)
-            .clickable(onClick = onClick),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(thumbHeight)
-                .background(Color.White),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (channel.logoUrl != null) {
-                // Medidas del portal: el logo se dimensiona explícitamente
-                // (ancho − 20, alto − 24), no por el padding del contenedor.
-                AsyncImage(
-                    model = channel.logoUrl,
-                    contentDescription = channel.name,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(
-                        width = width - 20.dp,
-                        height = thumbHeight - 24.dp,
-                    ),
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Outlined.Tv,
-                    contentDescription = null,
-                    tint = Color(0x26000000),
-                    modifier = Modifier.size(width * 0.45f),
-                )
-            }
-
-            // Distintivo EN VIVO: todo el catálogo del home es señal en directo.
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(HomePalette.LiveRed)
-                    .padding(horizontal = 5.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Box(
-                    Modifier
-                        .size(4.dp)
-                        .clip(CircleShape)
-                        .background(Color.White)
-                )
-                Text(
-                    text = "EN VIVO",
-                    color = Color.White,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Black,
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(HomePalette.CardStrip)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = channel.name,
-                color = HomePalette.CardTitle,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = channel.category.ifBlank { "En vivo" },
-                color = HomePalette.CardSubtitle,
-                fontSize = 10.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }

@@ -1,6 +1,9 @@
 // ui/NavGraph.kt
 package com.luki.play.ui
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -13,11 +16,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.luki.play.data.auth.AuthRepository
 import com.luki.play.data.auth.SessionState
 import com.luki.play.feature.detail.ChannelDetailScreen
 import com.luki.play.feature.downloads.DownloadsScreen
+import com.luki.play.feature.favorites.FavoritesScreen
 import com.luki.play.feature.home.HomeScreen
 import com.luki.play.feature.login.LoginScreen
 import com.luki.play.feature.login.RecoverPasswordScreen
@@ -33,6 +38,7 @@ object LukiRoutes {
     const val RECOVER   = "recover"
     const val HOME      = "home"
     const val SEARCH    = "search"
+    const val FAVORITES = "favorites"
     const val DOWNLOADS = "downloads"
     const val DETAIL    = "detail/{channelId}"
     fun detail(channelId: String): String = "detail/$channelId"
@@ -88,59 +94,88 @@ fun LukiNavGraph(
         if (authRepository.current() is SessionState.Anonymous) LukiRoutes.LOGIN
         else LukiRoutes.HOME
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val showBottomBar = currentRoute in TAB_ROUTES
 
-        composable(LukiRoutes.LOGIN) {
-            LoginScreen(
-                onLoggedIn = {
-                    navController.navigate(LukiRoutes.HOME) {
-                        popUpTo(LukiRoutes.LOGIN) { inclusive = true }
+    Column(Modifier.fillMaxSize()) {
+        NavHost(
+            navController = navController,
+            startDestination = startDestination,
+            modifier = Modifier.weight(1f),
+        ) {
+
+            composable(LukiRoutes.LOGIN) {
+                LoginScreen(
+                    onLoggedIn = {
+                        navController.navigate(LukiRoutes.HOME) {
+                            popUpTo(LukiRoutes.LOGIN) { inclusive = true }
+                        }
+                    },
+                    onForgotPassword = { navController.navigate(LukiRoutes.RECOVER) },
+                    // Activación y solicitud de acceso siguen viviendo en el
+                    // portal: no hay pantalla nativa todavía, así que se abren
+                    // ahí en vez de dejar un enlace muerto.
+                    onActivateAccount = onOpenPortal,
+                    onRequestAccess   = onOpenPortal,
+                )
+            }
+
+            composable(LukiRoutes.RECOVER) {
+                RecoverPasswordScreen(
+                    // popBackStack en vez de navigate: el login sigue en el stack
+                    // y así no se apilan instancias al ir y volver.
+                    onBackToLogin = { navController.popBackStack(LukiRoutes.LOGIN, inclusive = false) },
+                )
+            }
+
+            composable(LukiRoutes.HOME) {
+                HomeScreen(
+                    onChannelClick = { ch -> navController.navigate(LukiRoutes.detail(ch.id)) },
+                    onLogout       = { sessionViewModel.logout() },
+                )
+            }
+
+            composable(LukiRoutes.SEARCH) {
+                SearchScreen(
+                    onChannelClick = { ch -> navController.navigate(LukiRoutes.detail(ch.id)) },
+                )
+            }
+
+            composable(LukiRoutes.FAVORITES) {
+                FavoritesScreen(
+                    onChannelClick = { ch -> navController.navigate(LukiRoutes.detail(ch.id)) },
+                )
+            }
+
+            composable(LukiRoutes.DOWNLOADS) {
+                DownloadsScreen()
+            }
+
+            composable(LukiRoutes.DETAIL) {
+                ChannelDetailScreen(
+                    onPlay = onLaunchPlayer,
+                    onBack = { navController.popBackStack() },
+                    onRequestParentalGate = triggerParentalGate,
+                )
+            }
+        }
+
+        if (showBottomBar) {
+            LukiBottomBar(
+                currentRoute = currentRoute,
+                onNavigate = { route ->
+                    if (route != currentRoute) {
+                        navController.navigate(route) {
+                            // Comportamiento de pestañas: una sola instancia de
+                            // cada una y sin acumular back-stack al saltar entre
+                            // ellas; el botón atrás vuelve a Inicio, no recorre
+                            // el historial de pestañas visitadas.
+                            popUpTo(LukiRoutes.HOME) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 },
-                onForgotPassword = { navController.navigate(LukiRoutes.RECOVER) },
-                // Activación y solicitud de acceso siguen viviendo en el
-                // portal: no hay pantalla nativa todavía, así que se abren
-                // ahí en vez de dejar un enlace muerto.
-                onActivateAccount = onOpenPortal,
-                onRequestAccess   = onOpenPortal,
-            )
-        }
-
-        composable(LukiRoutes.RECOVER) {
-            RecoverPasswordScreen(
-                // popBackStack en vez de navigate: el login sigue en el stack
-                // y así no se apilan instancias al ir y volver.
-                onBackToLogin = { navController.popBackStack(LukiRoutes.LOGIN, inclusive = false) },
-            )
-        }
-
-        composable(LukiRoutes.HOME) {
-            // Sin entrada a SEARCH: el header del portal no la tiene. Sus
-            // pestañas (Inicio/Buscar/Mi Lista) están ocultas en web, que es
-            // justo la versión que ve hoy el usuario dentro del WebView, así
-            // que replicarla deja la búsqueda sin acceso. Queda pendiente
-            // decidir si se recupera con la barra inferior del portal.
-            HomeScreen(
-                onChannelClick = { ch -> navController.navigate(LukiRoutes.detail(ch.id)) },
-                onLogout       = { sessionViewModel.logout() },
-            )
-        }
-
-        composable(LukiRoutes.SEARCH) {
-            SearchScreen(
-                onChannelClick = { ch -> navController.navigate(LukiRoutes.detail(ch.id)) },
-            )
-        }
-
-        composable(LukiRoutes.DOWNLOADS) {
-            DownloadsScreen()
-        }
-
-        composable(LukiRoutes.DETAIL) {
-            ChannelDetailScreen(
-                onPlay = onLaunchPlayer,
-                onBack = { navController.popBackStack() },
-                onRequestParentalGate = triggerParentalGate,
             )
         }
     }
@@ -158,6 +193,9 @@ fun LukiNavGraph(
         }
     }
 }
+
+/** Rutas que muestran la barra de pestanas. */
+private val TAB_ROUTES = setOf(LukiRoutes.HOME, LukiRoutes.SEARCH, LukiRoutes.FAVORITES)
 
 private data class ParentalGateRequest(
     val onVerified: () -> Unit,

@@ -7,6 +7,7 @@ import com.luki.play.data.catalog.ChannelsRepository
 import com.luki.play.data.catalog.domain.Channel
 import com.luki.play.data.catalog.domain.Slider
 import com.luki.play.data.auth.TokenStore
+import com.luki.play.data.favorites.FavoritesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,6 +26,7 @@ import javax.inject.Inject
 data class HomeUiState(
     val sliders: List<Slider> = emptyList(),
     val rows: List<ChannelRow> = emptyList(),
+    val favorites: Set<String> = emptySet(),
     val user: HomeUser? = null,
     val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
@@ -58,6 +60,7 @@ private data class TransientState(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: ChannelsRepository,
+    private val favoritesRepository: FavoritesRepository,
     private val tokenStore: TokenStore,
 ) : ViewModel() {
 
@@ -78,8 +81,9 @@ class HomeViewModel @Inject constructor(
 
     val uiState: StateFlow<HomeUiState> = combine(
         repository.observeChannels(),
+        favoritesRepository.favorites,
         transient,
-    ) { channels, t ->
+    ) { channels, favorites, t ->
         val rows = channels
             .groupBy { it.category }
             .map { (cat, items) -> ChannelRow(cat, items) }
@@ -87,6 +91,7 @@ class HomeViewModel @Inject constructor(
         HomeUiState(
             sliders      = t.sliders,
             rows         = rows,
+            favorites    = favorites,
             user         = currentUser,
             isRefreshing = t.isRefreshing,
             errorMessage = t.errorMessage,
@@ -101,11 +106,17 @@ class HomeViewModel @Inject constructor(
         refresh()
     }
 
+    /** Marca o desmarca un canal. La reversión ante error la hace el repo. */
+    fun toggleFavorite(channelId: String, favorite: Boolean) {
+        viewModelScope.launch { favoritesRepository.toggle(channelId, favorite) }
+    }
+
     fun refresh() {
         viewModelScope.launch {
             transient.value = transient.value.copy(isRefreshing = true, errorMessage = null)
             val refreshResult = repository.refresh()
             val slidersResult = repository.sliders()
+            favoritesRepository.refresh()
             transient.value = TransientState(
                 sliders      = slidersResult.getOrDefault(transient.value.sliders),
                 isRefreshing = false,
