@@ -2,40 +2,29 @@
 package com.luki.play.feature.login
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /**
- * Recuperación de contraseña por OTP — réplica del `ForgotForm` del front
- * web: paso 1 cédula, paso 2 código de 6 + nueva contraseña, paso 3 listo.
+ * Recuperación de contraseña por OTP — réplica del `ForgotForm` del portal:
+ * mismo shell (gradiente + logo + tarjeta), indicador de 3 pasos, back-link
+ * que cambia de etiqueta según el paso, y los mismos copys.
  */
 @Composable
 fun RecoverPasswordScreen(
@@ -49,188 +38,113 @@ fun RecoverPasswordScreen(
     var newPassword by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            TextButton(
-                onClick = {
-                    if (state.step == RecoverStep.VERIFY) viewModel.backToIdentity() else onBackToLogin()
-                },
-                modifier = Modifier.align(Alignment.Start),
-            ) {
-                Text(
-                    if (state.step == RecoverStep.VERIFY) "Cambiar cédula"
-                    else "Volver al inicio de sesión"
+    AuthScaffold {
+        AuthBackLink(
+            label = if (state.step == RecoverStep.VERIFY) "Cambiar cédula"
+                    else "Volver al inicio de sesión",
+            onClick = {
+                if (state.step == RecoverStep.VERIFY) viewModel.backToIdentity() else onBackToLogin()
+            },
+        )
+
+        AuthHeading(title = "Recuperar contraseña", subtitle = null)
+
+        StepIndicator(stepIndex = state.step.ordinal)
+
+        state.errorMessage?.let { AuthErrorBox(it) }
+        state.infoMessage?.let { AuthInfoBox(it) }
+
+        when (state.step) {
+            RecoverStep.IDENTITY -> {
+                AuthBodyText("Ingresa tu cédula y te enviaremos un código de verificación a tu correo registrado.")
+                AuthInput(
+                    label = "Cédula de identidad",
+                    placeholder = "Ej: 1720345678",
+                    value = idNumber,
+                    onValueChange = { idNumber = it },
+                    keyboardType = KeyboardType.Number,
+                    enabled = !state.isLoading,
+                )
+                AuthPrimaryButton(
+                    title = "Enviar código de recuperación",
+                    isLoading = state.isLoading,
+                    onClick = { viewModel.requestOtp(idNumber) },
                 )
             }
 
-            Text(
-                "Recuperar contraseña",
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-
-            Text(
-                "Paso ${state.step.ordinal + 1} de 3",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(bottom = 16.dp),
-            )
-
-            state.errorMessage?.let { msg ->
-                Text(
-                    msg,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 12.dp),
+            RecoverStep.VERIFY -> {
+                AuthBodyText("Ingresa el código que enviamos a tu correo y elige tu nueva contraseña.")
+                AuthInput(
+                    label = "Código de verificación",
+                    placeholder = "Ej: A1B2C3",
+                    value = code,
+                    // El backend exige exactamente 6; se normaliza igual que
+                    // la web (mayúsculas, alfanumérico, tope 6).
+                    onValueChange = { raw ->
+                        code = raw.uppercase().filter { it.isLetterOrDigit() }.take(6)
+                    },
+                    enabled = !state.isLoading,
+                )
+                AuthInput(
+                    label = "Nueva contraseña",
+                    placeholder = PasswordPolicy.RULE_HINT,
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    secure = true,
+                    keyboardType = KeyboardType.Password,
+                    enabled = !state.isLoading,
+                )
+                AuthInput(
+                    label = "Confirmar contraseña",
+                    placeholder = "••••••••",
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    secure = true,
+                    keyboardType = KeyboardType.Password,
+                    enabled = !state.isLoading,
+                )
+                AuthPrimaryButton(
+                    title = "Restablecer contraseña",
+                    isLoading = state.isLoading,
+                    onClick = { viewModel.resetPassword(code, newPassword, confirmPassword) },
+                )
+                AuthLink(
+                    text = "Reenviar código",
+                    onClick = { viewModel.requestOtp(idNumber) },
+                    modifier = Modifier.padding(top = 16.dp),
                 )
             }
-            state.infoMessage?.let { msg ->
-                Text(
-                    msg,
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 12.dp),
+
+            RecoverStep.DONE -> {
+                AuthBodyText("Tu contraseña fue restablecida. Ya puedes iniciar sesión.")
+                AuthPrimaryButton(
+                    title = "Ir al inicio de sesión",
+                    onClick = onBackToLogin,
                 )
-            }
-
-            when (state.step) {
-                RecoverStep.IDENTITY -> {
-                    Text(
-                        "Ingresa tu cédula y te enviaremos un código de verificación a tu correo registrado.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 20.dp),
-                    )
-                    OutlinedTextField(
-                        value = idNumber,
-                        onValueChange = { idNumber = it },
-                        label = { Text("Cédula de identidad") },
-                        placeholder = { Text("Ej: 1720345678") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        enabled = !state.isLoading,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    PrimaryActionButton(
-                        text = "Enviar código de recuperación",
-                        isLoading = state.isLoading,
-                        onClick = { viewModel.requestOtp(idNumber) },
-                    )
-                }
-
-                RecoverStep.VERIFY -> {
-                    Text(
-                        "Ingresa el código que enviamos a tu correo y elige tu nueva contraseña.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 20.dp),
-                    )
-                    OutlinedTextField(
-                        value = code,
-                        // El backend exige exactamente 6; se normaliza igual
-                        // que la web (mayúsculas, alfanumérico, tope 6).
-                        onValueChange = { raw ->
-                            code = raw.uppercase().filter { it.isLetterOrDigit() }.take(6)
-                        },
-                        label = { Text("Código de verificación") },
-                        placeholder = { Text("Ej: A1B2C3") },
-                        singleLine = true,
-                        enabled = !state.isLoading,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        label = { Text("Nueva contraseña") },
-                        supportingText = { Text(PasswordPolicy.RULE_HINT) },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        enabled = !state.isLoading,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp),
-                    )
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        label = { Text("Confirmar contraseña") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        enabled = !state.isLoading,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp),
-                    )
-                    PrimaryActionButton(
-                        text = "Restablecer contraseña",
-                        isLoading = state.isLoading,
-                        onClick = { viewModel.resetPassword(code, newPassword, confirmPassword) },
-                    )
-                    TextButton(
-                        onClick = { viewModel.requestOtp(idNumber) },
-                        enabled = !state.isLoading,
-                        modifier = Modifier.padding(top = 8.dp),
-                    ) {
-                        Text("Reenviar código")
-                    }
-                }
-
-                RecoverStep.DONE -> {
-                    Text(
-                        "Tu contraseña fue restablecida. Ya puedes iniciar sesión.",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 20.dp),
-                    )
-                    PrimaryActionButton(
-                        text = "Ir al inicio de sesión",
-                        isLoading = false,
-                        onClick = onBackToLogin,
-                    )
-                }
             }
         }
     }
 }
 
+/** Tres barras que marcan el avance, como el StepIndicator del portal. */
 @Composable
-private fun PrimaryActionButton(
-    text: String,
-    isLoading: Boolean,
-    onClick: () -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        enabled = !isLoading,
+private fun StepIndicator(stepIndex: Int) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 24.dp)
-            .height(48.dp),
+            .padding(top = 12.dp, bottom = 20.dp),
     ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                color = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
+        repeat(3) { i ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        if (i <= stepIndex) AuthPalette.Accent else AuthPalette.InputBorder
+                    )
             )
-        } else {
-            Text(text)
         }
     }
 }

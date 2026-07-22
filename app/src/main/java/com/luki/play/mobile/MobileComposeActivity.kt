@@ -42,6 +42,11 @@ class MobileComposeActivity : ComponentActivity() {
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                         )
                     },
+                    // Activación / solicitud de acceso todavía viven en el
+                    // portal; se abre el WebView existente para esos flujos.
+                    onOpenPortal = {
+                        startActivity(Intent(this, MobileMainActivity::class.java))
+                    },
                     profilesRepository = profilesRepository,
                     authRepository = authRepository,
                 )

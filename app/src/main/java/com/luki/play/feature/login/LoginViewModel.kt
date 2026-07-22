@@ -16,14 +16,7 @@ import timber.log.Timber
 import java.io.IOException
 import javax.inject.Inject
 
-/**
- * Modo de autenticación — mismos dos caminos que el front web
- * (`/auth/app/id-login` y `/auth/app/contract-login`).
- */
-enum class LoginMode { CEDULA, CONTRATO }
-
 data class LoginUiState(
-    val mode: LoginMode = LoginMode.CEDULA,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val loggedIn: Boolean = false,
@@ -32,6 +25,9 @@ data class LoginUiState(
 /**
  * Login de abonado, réplica fiel del front web (`app/(auth)/login.tsx`):
  *
+ * - Solo cédula, igual que el portal. El endpoint de contrato existe en
+ *   [AuthRepository] (espeja la API) pero la pantalla web tampoco lo
+ *   expone, así que aquí no se ofrece.
  * - Validación local: SOLO trim + campo requerido. Deliberadamente sin
  *   checksum ni longitud de cédula — en la base conviven cédulas (10
  *   dígitos) y RUC (13), y el front tampoco valida formato.
@@ -48,19 +44,11 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    fun setMode(mode: LoginMode) {
-        _uiState.value = _uiState.value.copy(mode = mode, errorMessage = null)
-    }
-
-    fun login(credential: String, password: String) {
-        val cred = credential.trim()
-        if (cred.isBlank()) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = when (_uiState.value.mode) {
-                    LoginMode.CEDULA   -> "La cédula es requerida"
-                    LoginMode.CONTRATO -> "El número de contrato es requerido"
-                }
-            )
+    fun login(idNumber: String, password: String) {
+        val cedula = idNumber.trim()
+        // Mismo orden y mismos mensajes que handleLogin() del portal.
+        if (cedula.isBlank()) {
+            _uiState.value = _uiState.value.copy(errorMessage = "La cédula es requerida")
             return
         }
         if (password.isBlank()) {
@@ -70,11 +58,7 @@ class LoginViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            val result = when (_uiState.value.mode) {
-                LoginMode.CEDULA   -> authRepository.loginWithId(cred, password)
-                LoginMode.CONTRATO -> authRepository.loginWithContract(cred, password)
-            }
-            result
+            authRepository.loginWithId(cedula, password)
                 .onSuccess {
                     _uiState.value = _uiState.value.copy(isLoading = false, loggedIn = true)
                 }

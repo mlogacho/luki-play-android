@@ -61,13 +61,13 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `contrato vacio muestra su mensaje propio`() = runTest(dispatcher) {
-        val (vm, _) = vm(FakeAuthApi(loginResponse = okResponse()))
+    fun `contrasena vacia muestra su mensaje propio`() = runTest(dispatcher) {
+        val (vm, api) = vm(FakeAuthApi(loginResponse = okResponse()))
 
-        vm.setMode(LoginMode.CONTRATO)
-        vm.login("", "secret")
+        vm.login("1720345678", "")
 
-        assertEquals("El número de contrato es requerido", vm.uiState.value.errorMessage)
+        assertEquals("La contraseña es requerida", vm.uiState.value.errorMessage)
+        assertEquals(0, api.idLoginCalls)
     }
 
     @Test
@@ -98,16 +98,14 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `modo contrato llama al endpoint de contrato`() = runTest(dispatcher) {
+    fun `la pantalla solo usa el endpoint de cedula, como el portal`() = runTest(dispatcher) {
         val (vm, api) = vm(FakeAuthApi(loginResponse = okResponse()))
 
-        vm.setMode(LoginMode.CONTRATO)
-        vm.login("C-99", "pwd")
+        vm.login("1720345678", "pwd")
         dispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(0, api.idLoginCalls)
-        assertEquals(1, api.contractLoginCalls)
-        assertEquals("C-99", api.lastContractRequest!!.contractNumber)
+        assertEquals(1, api.idLoginCalls)
+        assertEquals(0, api.contractLoginCalls)
     }
 
     @Test

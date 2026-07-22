@@ -56,6 +56,8 @@ object LukiRoutes {
 @Composable
 fun LukiNavGraph(
     onLaunchPlayer: (StreamConfig) -> Unit,
+    /** Abre el portal web — flujos que aún no tienen pantalla nativa. */
+    onOpenPortal: () -> Unit,
     profilesRepository: ProfilesRepository,
     authRepository: AuthRepository,
     navController: NavHostController = rememberNavController(),
@@ -98,6 +100,11 @@ fun LukiNavGraph(
                     }
                 },
                 onForgotPassword = { navController.navigate(LukiRoutes.RECOVER) },
+                // Activación y solicitud de acceso siguen viviendo en el
+                // portal: no hay pantalla nativa todavía, así que se abren
+                // ahí en vez de dejar un enlace muerto.
+                onActivateAccount = onOpenPortal,
+                onRequestAccess   = onOpenPortal,
             )
         }
 

@@ -1,54 +1,42 @@
 // feature/login/LoginScreen.kt
 package com.luki.play.feature.login
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /**
- * Login de abonado — réplica del front web (`app/(auth)/login.tsx`):
- * dos modos (cédula / contrato), teclado numérico para la cédula,
- * placeholder idéntico y validación mínima (trim + requerido).
+ * Login de abonado — réplica visual y funcional del `LoginForm` del portal
+ * (`frontend/app/(auth)/login.tsx`): mismo gradiente, logo, tarjeta,
+ * tipografía, copys y orden de elementos.
+ *
+ * Nota de fidelidad: el portal ofrece SOLO cédula en esta pantalla. El
+ * endpoint de contrato existe en la API (y en [LoginViewModel]) pero no
+ * está expuesto en la UI web, así que aquí tampoco se expone.
+ *
+ * @param onActivateAccount  "Activa tu cuenta" — flujo de primer acceso.
+ * @param onRequestAccess    "Solicitar acceso" — registro de no-clientes.
  */
 @Composable
 fun LoginScreen(
     onLoggedIn: () -> Unit,
     onForgotPassword: () -> Unit,
+    onActivateAccount: () -> Unit,
+    onRequestAccess: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    var credential by rememberSaveable { mutableStateOf("") }
+    var idNumber by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(state.loggedIn) {
@@ -58,120 +46,57 @@ fun LoginScreen(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                "Iniciar sesión",
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 24.dp),
-            )
+    AuthScaffold {
+        AuthHeading(
+            title = "Bienvenido de nuevo",
+            subtitle = "Inicia sesión con tu cédula y contraseña",
+        )
 
-            TabRow(
-                selectedTabIndex = state.mode.ordinal,
-                modifier = Modifier.padding(bottom = 16.dp),
-            ) {
-                Tab(
-                    selected = state.mode == LoginMode.CEDULA,
-                    onClick = { viewModel.setMode(LoginMode.CEDULA) },
-                    text = { Text("Cédula") },
-                )
-                Tab(
-                    selected = state.mode == LoginMode.CONTRATO,
-                    onClick = { viewModel.setMode(LoginMode.CONTRATO) },
-                    text = { Text("Contrato") },
-                )
-            }
+        state.errorMessage?.let { AuthErrorBox(it) }
 
-            OutlinedTextField(
-                value = credential,
-                onValueChange = { credential = it },
-                label = {
-                    Text(
-                        when (state.mode) {
-                            LoginMode.CEDULA   -> "Cédula de identidad"
-                            LoginMode.CONTRATO -> "Número de contrato"
-                        }
-                    )
-                },
-                placeholder = {
-                    Text(
-                        when (state.mode) {
-                            LoginMode.CEDULA   -> "Ej: 1720345678"
-                            LoginMode.CONTRATO -> "Ej: C-000123"
-                        }
-                    )
-                },
-                singleLine = true,
-                // Teclado numérico solo como HINT (igual que el keyboardType
-                // "numeric" del front): no filtra caracteres — un RUC o un
-                // contrato alfanumérico deben poder escribirse.
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = when (state.mode) {
-                        LoginMode.CEDULA   -> KeyboardType.Number
-                        LoginMode.CONTRATO -> KeyboardType.Text
-                    }
-                ),
-                enabled = !state.isLoading,
-                modifier = Modifier.fillMaxWidth(),
-            )
+        AuthInput(
+            label = "Cédula de identidad",
+            placeholder = "Ej: 1720345678",
+            value = idNumber,
+            onValueChange = { idNumber = it },
+            keyboardType = KeyboardType.Number,
+            enabled = !state.isLoading,
+        )
 
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Contraseña") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                enabled = !state.isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-            )
+        AuthInput(
+            label = "Contraseña",
+            placeholder = "••••••••",
+            value = password,
+            onValueChange = { password = it },
+            secure = true,
+            keyboardType = KeyboardType.Password,
+            enabled = !state.isLoading,
+        )
 
-            state.errorMessage?.let { msg ->
-                Text(
-                    msg,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 12.dp),
-                )
-            }
+        AuthPrimaryButton(
+            title = "Iniciar sesión",
+            isLoading = state.isLoading,
+            onClick = { viewModel.login(idNumber, password) },
+        )
 
-            Button(
-                onClick = { viewModel.login(credential, password) },
-                enabled = !state.isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp)
-                    .height(48.dp),
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text("Ingresar")
-                }
-            }
+        AuthLink(
+            text = "¿Olvidaste tu contraseña?",
+            onClick = onForgotPassword,
+            modifier = Modifier.padding(top = 16.dp),
+        )
 
-            TextButton(
-                onClick = onForgotPassword,
-                enabled = !state.isLoading,
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Text("¿Olvidaste tu contraseña?")
-            }
-        }
+        AuthFooterAction(
+            question = "¿Primera vez?",
+            action = "Activa tu cuenta",
+            onClick = onActivateAccount,
+            modifier = Modifier.padding(top = 24.dp),
+        )
+
+        AuthFooterAction(
+            question = "¿No eres cliente Luki?",
+            action = "Solicitar acceso",
+            onClick = onRequestAccess,
+            modifier = Modifier.padding(top = 12.dp),
+        )
     }
 }
