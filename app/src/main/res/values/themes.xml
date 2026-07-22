@@ -51,19 +51,29 @@
          Elimina la pantalla blanca del sistema al abrir la app.
          ══════════════════════════════════════════════════════ -->
     <style name="Theme.LukiPlay.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/luki_dark</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_empty</item>
+        <!-- Mismo violeta que arranca el degradado del login nativo, para que
+             splash → router → login sea un solo color y no tres. -->
+        <item name="windowSplashScreenBackground">@color/luki_purple</item>
+        <!-- El PNG lleva margen transparente a propósito: Android 12+ enmascara
+             el icono en círculo y el logo a sangre perdería el badge "play".
+             Es bitmap, no vector: un VectorDrawable sin <path> fue justo lo que
+             crasheaba en Android ≤ 11, donde la librería lo infla a mano. -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.LukiPlay</item>
     </style>
 
     <!-- ══════════════════════════════════════════════════════
          TEMA SPLASH — Pantalla de inicio
          ══════════════════════════════════════════════════════ -->
+    <!-- Lo usan RouterActivity (invisible, solo redirige) y la <application>.
+         Comparte color con Theme.LukiPlay.Starting: antes era azul marino y
+         el arranque saltaba de casi-negro a marino y luego al violeta del
+         login. -->
     <style name="Theme.LukiPlay.Splash" parent="Base.Theme.LukiPlay">
-        <item name="android:windowBackground">@color/luki_navy</item>
+        <item name="android:windowBackground">@color/luki_purple</item>
         <item name="android:windowNoTitle">true</item>
-        <item name="android:statusBarColor">@color/luki_navy</item>
-        <item name="android:navigationBarColor">@color/luki_navy</item>
+        <item name="android:statusBarColor">@color/luki_purple</item>
+        <item name="android:navigationBarColor">@color/luki_purple</item>
     </style>
 
     <!-- ══════════════════════════════════════════════════════
