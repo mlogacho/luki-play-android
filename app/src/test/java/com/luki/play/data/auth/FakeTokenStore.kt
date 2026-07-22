@@ -42,6 +42,7 @@ class FakeTokenStore(
     override fun email(): String? = mail
     override fun plan(): String? = userPlan
     override fun deviceId(): String = fixedDeviceId
+    override fun existingDeviceId(): String? = fixedDeviceId.takeIf { it.isNotBlank() }
 
     /** El id es fijo en el fake: siempre "existe", así que nunca adopta. */
     override fun adoptDeviceId(candidate: String): String = fixedDeviceId

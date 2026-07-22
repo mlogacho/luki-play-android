@@ -260,7 +260,11 @@ class LukiBridge(
             put("screenWidthDp",  deviceUtils.getScreenWidthDp())
             put("screenHeightDp", deviceUtils.getScreenHeightDp())
             put("supportsPip",    deviceUtils.supportsPip())
-            put("deviceId",       tokenStore.deviceId())
+            // Sin crearlo: este método corre en el arranque (isTvDevice()) y
+            // generar aquí el id impedía que la web entregara el suyo con
+            // adoptDeviceId, que nunca sobrescribe. Cadena vacía mientras no
+            // exista; la web no lee este campo (usa getDeviceId()).
+            put("deviceId",       tokenStore.existingDeviceId().orEmpty())
             put("platform",       "android")
             put("apiBaseUrl",     Constants.API_BASE_URL)  // Para que la web sepa la URL
         }.toString()

@@ -87,6 +87,9 @@ class SecureTokenStore @Inject constructor(
         return generated
     }
 
+    override fun existingDeviceId(): String? =
+        prefs.getString(Constants.KEY_DEVICE_ID, null)?.takeIf { it.isNotBlank() }
+
     override fun adoptDeviceId(candidate: String): String {
         val existing = prefs.getString(Constants.KEY_DEVICE_ID, null)
         if (!existing.isNullOrBlank()) return existing

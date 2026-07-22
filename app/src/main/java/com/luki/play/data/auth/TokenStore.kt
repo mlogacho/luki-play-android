@@ -47,8 +47,25 @@ interface TokenStore {
     /** Elimina toda la información de sesión. */
     fun clear()
 
-    /** Identificador estable de dispositivo (no se borra al hacer logout). */
+    /**
+     * Identificador estable de dispositivo (no se borra al hacer logout).
+     *
+     * **Lo CREA si no existe.** Para consultarlo sin provocar esa creación
+     * está [existingDeviceId].
+     */
     fun deviceId(): String
+
+    /**
+     * deviceId actual o `null` si todavía no hay ninguno, **sin crearlo**.
+     *
+     * Existe por un problema de orden en la migración: `getDeviceInfo()` del
+     * bridge se invoca en el arranque (vía `isTvDevice()`) y, al usar
+     * [deviceId], generaba un id propio ANTES de que la web pudiera entregar
+     * el suyo con [adoptDeviceId]. Como la adopción nunca sobrescribe, eso
+     * dejaba el aparato con dos identidades para siempre — justo lo que la
+     * unificación pretende evitar.
+     */
+    fun existingDeviceId(): String?
 
     /**
      * Adopta un deviceId externo SOLO si aún no hay uno propio.

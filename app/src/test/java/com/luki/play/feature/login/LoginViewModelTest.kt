@@ -172,6 +172,7 @@ private class FakeTokenStore : TokenStore {
     override fun email(): String? = mail
     override fun plan(): String? = userPlan
     override fun deviceId(): String = "test-device"
+    override fun existingDeviceId(): String? = "test-device"
     override fun adoptDeviceId(candidate: String): String = "test-device"
 
     override fun save(

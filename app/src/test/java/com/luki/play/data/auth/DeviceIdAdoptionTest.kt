@@ -3,6 +3,7 @@ package com.luki.play.data.auth
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.UUID
@@ -69,11 +70,30 @@ class DeviceIdAdoptionTest {
         val store = InMemoryDeviceIdStore()
         assertEquals(store.deviceId(), store.deviceId())
     }
+
+    @Test
+    fun `consultar el id sin crearlo deja la adopcion posible`() {
+        // El caso que rompia la unificacion: getDeviceInfo() del bridge corre
+        // en el arranque (isTvDevice()) y, si consultara con deviceId(),
+        // generaria un id propio ANTES de que la web entregara el suyo. Como
+        // adoptDeviceId nunca sobrescribe, el aparato se quedaba con dos
+        // identidades para siempre.
+        val store = InMemoryDeviceIdStore()
+
+        assertNull("consultar no debe crear", store.existingDeviceId())
+
+        val effective = store.adoptDeviceId("web-uuid-123")
+
+        assertEquals("web-uuid-123", effective)
+        assertEquals("web-uuid-123", store.existingDeviceId())
+    }
 }
 
 /** Réplica en memoria de la lógica de deviceId de [SecureTokenStore]. */
 private class InMemoryDeviceIdStore {
     private var stored: String? = null
+
+    fun existingDeviceId(): String? = stored?.takeIf { it.isNotBlank() }
 
     fun deviceId(): String {
         stored?.takeIf { it.isNotBlank() }?.let { return it }
