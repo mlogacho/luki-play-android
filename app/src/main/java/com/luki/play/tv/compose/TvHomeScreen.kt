@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -76,6 +77,7 @@ import com.luki.play.ui.LukiPalette
 @Composable
 fun TvHomeScreen(
     onChannelClick: (Channel) -> Unit,
+    onOpenAccount: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,7 +100,7 @@ fun TvHomeScreen(
             contentPadding = PaddingValues(top = 24.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
-            item { TvHeader() }
+            item { TvHeader(onOpenAccount = onOpenAccount) }
 
             if (hero != null) {
                 item {
@@ -141,15 +143,59 @@ private fun channelById(rows: List<ChannelRow>, id: String): Channel? =
 // ─── Header ─────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun TvHeader() {
-    Image(
-        painter = painterResource(R.drawable.luki_logo_h),
-        contentDescription = "Luki Play",
-        contentScale = ContentScale.Fit,
+private fun TvHeader(onOpenAccount: () -> Unit) {
+    Row(
         modifier = Modifier
-            .padding(start = OVERSCAN, top = 8.dp)
-            .height(30.dp),
-    )
+            .fillMaxWidth()
+            .padding(start = OVERSCAN, end = OVERSCAN, top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.luki_logo_h),
+            contentDescription = "Luki Play",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.height(30.dp),
+        )
+        Spacer(Modifier.weight(1f))
+        TvAccountChip(onClick = onOpenAccount)
+    }
+}
+
+/** Acceso a la cuenta (cierre de sesión) desde el home. Enfocable con el mando. */
+@Composable
+private fun TvAccountChip(onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (focused) 1.1f else 1f, label = "accountChipScale")
+
+    Row(
+        modifier = Modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (focused) LukiPalette.Accent else Color(0x1FFFFFFF))
+            .border(
+                width = if (focused) 2.dp else 0.dp,
+                color = if (focused) Color.White else Color.Transparent,
+                shape = RoundedCornerShape(20.dp),
+            )
+            .onFocusChanged { focused = it.isFocused }
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Person,
+            contentDescription = "Mi cuenta",
+            tint = if (focused) LukiPalette.OnAccent else Color.White,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = "Mi cuenta",
+            color = if (focused) LukiPalette.OnAccent else Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
+    }
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import com.luki.play.player.StreamConfig
 object TvRoutes {
     const val ACTIVATION = "tv/activation"
     const val HOME       = "tv/home"
+    const val ACCOUNT    = "tv/account"
     const val DETAIL     = "tv/detail/{channelId}"
     fun detail(channelId: String): String = "tv/detail/$channelId"
 }
@@ -41,7 +42,19 @@ fun TvNavGraph(
         }
         composable(TvRoutes.HOME) {
             TvHomeScreen(
-                onChannelClick = { ch -> navController.navigate(TvRoutes.detail(ch.id)) }
+                onChannelClick = { ch -> navController.navigate(TvRoutes.detail(ch.id)) },
+                onOpenAccount = { navController.navigate(TvRoutes.ACCOUNT) },
+            )
+        }
+        composable(TvRoutes.ACCOUNT) {
+            TvAccountScreen(
+                onLoggedOut = {
+                    // Sin sesión → de vuelta a la activación por QR, limpiando el
+                    // back stack (no debe poderse volver al catálogo con "atrás").
+                    navController.navigate(TvRoutes.ACTIVATION) {
+                        popUpTo(TvRoutes.HOME) { inclusive = true }
+                    }
+                },
             )
         }
         composable(TvRoutes.DETAIL) {
