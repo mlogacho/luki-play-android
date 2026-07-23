@@ -80,4 +80,8 @@ private class NoopAuthApi : AuthApi {
     override suspend fun logout() = error("no debe llamarse")
     override suspend fun requestPasswordOtp(body: RequestPasswordOtpRequest): MessageResponseDto = error("no debe llamarse")
     override suspend fun resetPasswordWithOtp(body: ResetPasswordOtpRequest): MessageResponseDto = error("no debe llamarse")
+    override suspend fun firstAccess(body: com.luki.play.data.auth.api.FirstAccessRequest) = error("no debe llamarse")
+    override suspend fun requestActivationCode(body: com.luki.play.data.auth.api.RequestActivationCodeRequest) = error("no debe llamarse")
+    override suspend fun verifyActivationCode(body: com.luki.play.data.auth.api.VerifyActivationCodeRequest) = error("no debe llamarse")
+    override suspend fun activate(body: com.luki.play.data.auth.api.ActivateRequest) = error("no debe llamarse")
 }

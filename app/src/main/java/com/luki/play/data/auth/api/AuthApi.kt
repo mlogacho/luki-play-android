@@ -30,4 +30,18 @@ interface AuthApi {
 
     @POST(Constants.Auth.RESET_WITH_OTP)
     suspend fun resetPasswordWithOtp(@Body body: ResetPasswordOtpRequest): MessageResponseDto
+
+    // ── Activación de cuenta (sin auth) ──
+
+    @POST(Constants.Auth.FIRST_ACCESS)
+    suspend fun firstAccess(@Body body: FirstAccessRequest): FirstAccessDto
+
+    @POST(Constants.Auth.REQUEST_ACTIVATION_CODE)
+    suspend fun requestActivationCode(@Body body: RequestActivationCodeRequest): ActivationCodeDto
+
+    @POST(Constants.Auth.VERIFY_ACTIVATION_CODE)
+    suspend fun verifyActivationCode(@Body body: VerifyActivationCodeRequest): MessageResponseDto
+
+    @POST(Constants.Auth.ACTIVATE)
+    suspend fun activate(@Body body: ActivateRequest): AuthResponseDto
 }

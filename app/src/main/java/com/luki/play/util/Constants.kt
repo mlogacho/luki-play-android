@@ -54,6 +54,16 @@ object Constants {
         const val RESET_WITH_OTP = "/auth/app/reset-with-otp"
         /** Cambiar contraseña (autenticado) — revoca todas las sesiones */
         const val CHANGE_PASSWORD = "/auth/change-password"
+
+        // ── Activación de cuenta (sin auth) ──
+        /** Verifica la cédula y devuelve el customerId */
+        const val FIRST_ACCESS = "/auth/app/first-access"
+        /** Envía el código de activación al correo REGISTRADO (solo customerId) */
+        const val REQUEST_ACTIVATION_CODE = "/auth/app/request-activation-code"
+        /** Verifica el código de activación */
+        const val VERIFY_ACTIVATION_CODE = "/auth/app/verify-activation-code"
+        /** Crea la contraseña y devuelve tokens (login) */
+        const val ACTIVATE = "/auth/app/activate"
     }
 
     // ── SharedPreferences keys ──────────────────────────────────────────────

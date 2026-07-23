@@ -2,13 +2,17 @@
 package com.luki.play.data.auth
 
 import com.luki.play.data.auth.api.AccountApi
+import com.luki.play.data.auth.api.ActivateRequest
 import com.luki.play.data.auth.api.AuthApi
 import com.luki.play.data.auth.api.ChangePasswordRequest
 import com.luki.play.data.auth.api.ContractLoginRequest
+import com.luki.play.data.auth.api.FirstAccessRequest
 import com.luki.play.data.auth.api.IdLoginRequest
+import com.luki.play.data.auth.api.RequestActivationCodeRequest
 import com.luki.play.data.auth.api.RequestPasswordOtpRequest
 import com.luki.play.data.auth.api.ResetPasswordOtpRequest
 import com.luki.play.data.auth.api.UserProfileDto
+import com.luki.play.data.auth.api.VerifyActivationCodeRequest
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -36,6 +40,17 @@ sealed interface SessionState {
     data object Anonymous : SessionState
     data class Authenticated(val userId: String, val displayName: String) : SessionState
 }
+
+/**
+ * Resultado de solicitar el código de activación. `sent` = si se envió;
+ * `needsSupportCode` = el correo no se pudo enviar (ir a soporte, no teclear);
+ * `maskedEmail` = correo registrado enmascarado, para mostrarlo en el paso.
+ */
+data class ActivationChannel(
+    val sent: Boolean,
+    val needsSupportCode: Boolean,
+    val maskedEmail: String?,
+)
 
 /**
  * Perfil del usuario autenticado, ya mapeado a dominio (`GET /auth/me`).
@@ -127,6 +142,52 @@ class AuthRepository internal constructor(
             authApi.resetPasswordWithOtp(ResetPasswordOtpRequest(idNumber, otpCode, newPassword))
             Unit
         }.onFailure { Timber.w(it, "AuthRepository: resetPasswordWithOtp falló") }
+    }
+
+    // ── Activación de cuenta ────────────────────────────────────────────────
+
+    /** Paso 1: identifica al cliente por cédula → customerId. */
+    suspend fun firstAccess(idNumber: String): Result<String> = withContext(ioDispatcher) {
+        runCatching {
+            authApi.firstAccess(FirstAccessRequest(idNumber)).customerId
+                ?.takeIf { it.isNotBlank() }
+                ?: error("first-access no devolvió customerId")
+        }.onFailure { Timber.w(it, "AuthRepository: firstAccess falló") }
+    }
+
+    /**
+     * Paso 2: pide el código al correo REGISTRADO (solo se envía el customerId;
+     * el backend elige el destino). Devuelve si se envió y el correo enmascarado.
+     */
+    suspend fun requestActivationCode(customerId: String): Result<ActivationChannel> =
+        withContext(ioDispatcher) {
+            runCatching {
+                val dto = authApi.requestActivationCode(RequestActivationCodeRequest(customerId))
+                ActivationChannel(dto.sent, dto.needsSupportCode, dto.maskedEmail)
+            }.onFailure { Timber.w(it, "AuthRepository: requestActivationCode falló") }
+        }
+
+    /** Paso 3: verifica el código de 6 caracteres. */
+    suspend fun verifyActivationCode(customerId: String, code: String): Result<Unit> =
+        withContext(ioDispatcher) {
+            runCatching {
+                authApi.verifyActivationCode(VerifyActivationCodeRequest(customerId, code.uppercase()))
+                Unit
+            }.onFailure { Timber.w(it, "AuthRepository: verifyActivationCode falló") }
+        }
+
+    /**
+     * Paso 4: crea la contraseña y deja la sesión iniciada. `email` es opcional
+     * (notificaciones), no el destino del código. Reutiliza [runAuth] para
+     * persistir tokens y marcar la sesión como autenticada, igual que el login.
+     */
+    suspend fun activate(
+        customerId: String,
+        otpCode: String,
+        password: String,
+        email: String?,
+    ): Result<AuthSession> = runAuth {
+        authApi.activate(ActivateRequest(customerId, otpCode.uppercase(), password, email?.takeIf { it.isNotBlank() }))
     }
 
     /**

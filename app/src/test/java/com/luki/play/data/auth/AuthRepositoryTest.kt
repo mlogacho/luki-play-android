@@ -1,6 +1,7 @@
 // test/data/auth/AuthRepositoryTest.kt
 package com.luki.play.data.auth
 
+import com.luki.play.data.auth.api.ActivationCodeDto
 import com.luki.play.data.auth.api.AuthApi
 import com.luki.play.data.auth.api.AuthResponseDto
 import com.luki.play.data.auth.api.AuthUserDto
@@ -111,6 +112,73 @@ class AuthRepositoryTest {
         assertEquals(1, store.clearCount)
         assertTrue(repo.current() is SessionState.Anonymous)
     }
+
+    // ── Activación de cuenta ──
+
+    @Test
+    fun `firstAccess devuelve el customerId`() = runTest {
+        val api = FakeAuthApi(firstAccessCustomerId = "cus_42")
+        val repo = AuthRepository(api, FakeAccountApi(), FakeTokenStore())
+
+        assertEquals("cus_42", repo.firstAccess("1753086899").getOrThrow())
+    }
+
+    @Test
+    fun `firstAccess sin customerId es failure`() = runTest {
+        val repo = AuthRepository(FakeAuthApi(firstAccessCustomerId = null), FakeAccountApi(), FakeTokenStore())
+
+        assertTrue(repo.firstAccess("x").isFailure)
+    }
+
+    @Test
+    fun `requestActivationCode propaga needsSupportCode y solo manda customerId`() = runTest {
+        val api = FakeAuthApi(activationCode = ActivationCodeDto(sent = false, needsSupportCode = true))
+        val repo = AuthRepository(api, FakeAccountApi(), FakeTokenStore())
+
+        val channel = repo.requestActivationCode("cus_1").getOrThrow()
+
+        assertTrue(channel.needsSupportCode)
+        // Garantía de seguridad (P0): el cuerpo NO deja al cliente elegir destino;
+        // solo viaja el customerId y el backend envía al correo registrado.
+        assertEquals("cus_1", api.lastActivationCodeRequest!!.customerId)
+    }
+
+    @Test
+    fun `activate crea sesion como el login y normaliza el codigo`() = runTest {
+        val api = FakeAuthApi(
+            activateResponse = AuthResponseDto(
+                accessToken = "acc", refreshToken = "ref",
+                user = AuthUserDto("u9", "Nueva", "n@x.ec", "lukiplay"),
+            )
+        )
+        val store = FakeTokenStore()
+        val repo = AuthRepository(api, FakeAccountApi(), store)
+
+        val session = repo.activate("cus_1", "a1b2c3", "Secreta123", "n@x.ec").getOrThrow()
+
+        assertEquals("acc", session.accessToken)
+        assertEquals("u9", session.userId)
+        assertEquals("acc", store.accessToken())
+        assertTrue(repo.current() is SessionState.Authenticated)
+
+        val req = api.lastActivateRequest!!
+        assertEquals("cus_1", req.customerId)
+        assertEquals("A1B2C3", req.otpCode)      // normalizado a mayúsculas
+        assertEquals("Secreta123", req.password)
+        assertEquals("n@x.ec", req.email)
+    }
+
+    @Test
+    fun `activate sin correo manda email nulo`() = runTest {
+        val api = FakeAuthApi(
+            activateResponse = AuthResponseDto("a", "r", AuthUserDto("u", "N", null, null))
+        )
+        val repo = AuthRepository(api, FakeAccountApi(), FakeTokenStore())
+
+        repo.activate("cus_1", "ABC123", "Secreta123", "").getOrThrow()
+
+        assertNull(api.lastActivateRequest!!.email)
+    }
 }
 
 /**
@@ -121,6 +189,9 @@ private class FakeAuthApi(
     private val loginException: Throwable? = null,
     private val refreshResponse: AuthResponseDto? = null,
     private val logoutException: Throwable? = null,
+    private val firstAccessCustomerId: String? = null,
+    private val activationCode: com.luki.play.data.auth.api.ActivationCodeDto? = null,
+    private val activateResponse: AuthResponseDto? = null,
 ) : AuthApi {
 
     var idLoginCalls = 0
@@ -134,6 +205,10 @@ private class FakeAuthApi(
     var lastContractRequest: ContractLoginRequest? = null
         private set
     var lastRefreshRequest: RefreshRequest? = null
+        private set
+    var lastActivationCodeRequest: com.luki.play.data.auth.api.RequestActivationCodeRequest? = null
+        private set
+    var lastActivateRequest: com.luki.play.data.auth.api.ActivateRequest? = null
         private set
 
     override suspend fun loginWithId(body: IdLoginRequest): AuthResponseDto {
@@ -165,4 +240,20 @@ private class FakeAuthApi(
 
     override suspend fun resetPasswordWithOtp(body: ResetPasswordOtpRequest) =
         MessageResponseDto("Contraseña actualizada.")
+
+    override suspend fun firstAccess(body: com.luki.play.data.auth.api.FirstAccessRequest) =
+        com.luki.play.data.auth.api.FirstAccessDto(firstAccessCustomerId)
+
+    override suspend fun requestActivationCode(body: com.luki.play.data.auth.api.RequestActivationCodeRequest): com.luki.play.data.auth.api.ActivationCodeDto {
+        lastActivationCodeRequest = body
+        return activationCode ?: com.luki.play.data.auth.api.ActivationCodeDto(sent = true)
+    }
+
+    override suspend fun verifyActivationCode(body: com.luki.play.data.auth.api.VerifyActivationCodeRequest) =
+        MessageResponseDto("ok")
+
+    override suspend fun activate(body: com.luki.play.data.auth.api.ActivateRequest): AuthResponseDto {
+        lastActivateRequest = body
+        return activateResponse ?: error("FakeAuthApi: activateResponse no configurado")
+    }
 }

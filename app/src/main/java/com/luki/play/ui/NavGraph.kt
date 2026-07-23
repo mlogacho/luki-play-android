@@ -20,6 +20,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.luki.play.data.auth.AuthRepository
 import com.luki.play.data.auth.SessionState
+import com.luki.play.feature.login.ActivateAccountScreen
 import com.luki.play.feature.detail.ChannelLaunchScreen
 import com.luki.play.feature.downloads.DownloadsScreen
 import com.luki.play.feature.favorites.FavoritesScreen
@@ -39,6 +40,7 @@ import androidx.media3.common.util.UnstableApi
 object LukiRoutes {
     const val LOGIN     = "login"
     const val RECOVER   = "recover"
+    const val ACTIVATE  = "activate"
     const val HOME      = "home"
     const val SEARCH    = "search"
     const val FAVORITES = "favorites"
@@ -118,10 +120,9 @@ fun LukiNavGraph(
                         }
                     },
                     onForgotPassword = { navController.navigate(LukiRoutes.RECOVER) },
-                    // Activación y solicitud de acceso siguen viviendo en el
-                    // portal: no hay pantalla nativa todavía, así que se abren
-                    // ahí en vez de dejar un enlace muerto.
-                    onActivateAccount = onOpenPortal,
+                    // "Activa tu cuenta" ya tiene pantalla nativa. "Solicitar
+                    // acceso" (no-clientes) sigue en el portal: no es activación.
+                    onActivateAccount = { navController.navigate(LukiRoutes.ACTIVATE) },
                     onRequestAccess   = onOpenPortal,
                 )
             }
@@ -130,6 +131,19 @@ fun LukiNavGraph(
                 RecoverPasswordScreen(
                     // popBackStack en vez de navigate: el login sigue en el stack
                     // y así no se apilan instancias al ir y volver.
+                    onBackToLogin = { navController.popBackStack(LukiRoutes.LOGIN, inclusive = false) },
+                )
+            }
+
+            composable(LukiRoutes.ACTIVATE) {
+                ActivateAccountScreen(
+                    // Igual que el login: al activar, la sesión queda iniciada y
+                    // se entra a Home limpiando el login del back-stack.
+                    onActivated = {
+                        navController.navigate(LukiRoutes.HOME) {
+                            popUpTo(LukiRoutes.LOGIN) { inclusive = true }
+                        }
+                    },
                     onBackToLogin = { navController.popBackStack(LukiRoutes.LOGIN, inclusive = false) },
                 )
             }

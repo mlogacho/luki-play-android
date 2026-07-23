@@ -60,6 +60,59 @@ data class MessageResponseDto(
     @Json(name = "message") val message: String?,
 )
 
+// ── Activación de cuenta ────────────────────────────────────────────────────────
+
+/** first-access: identifica al cliente por cédula. */
+@JsonClass(generateAdapter = true)
+data class FirstAccessRequest(
+    @Json(name = "idNumber") val idNumber: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class FirstAccessDto(
+    @Json(name = "customerId") val customerId: String?,
+)
+
+/**
+ * request-activation-code: el cuerpo SOLO lleva el customerId. El backend
+ * envía el código al correo REGISTRADO del cliente y devuelve su versión
+ * enmascarada. Dejar que el cliente eligiera el destino permitía secuestrar
+ * cuentas sin activar con solo la cédula (P0 corregido) — por eso aquí NO hay
+ * campo de correo.
+ */
+@JsonClass(generateAdapter = true)
+data class RequestActivationCodeRequest(
+    @Json(name = "customerId") val customerId: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class ActivationCodeDto(
+    @Json(name = "sent")            val sent: Boolean = false,
+    /** true si el correo no se pudo enviar: hay que ir a soporte, no a teclear. */
+    @Json(name = "needsSupportCode") val needsSupportCode: Boolean = false,
+    @Json(name = "maskedEmail")      val maskedEmail: String? = null,
+)
+
+/** verify-activation-code: valida el código de 6 antes de crear la contraseña. */
+@JsonClass(generateAdapter = true)
+data class VerifyActivationCodeRequest(
+    @Json(name = "customerId") val customerId: String,
+    @Json(name = "code")       val code: String,
+)
+
+/**
+ * activate: crea la contraseña y devuelve tokens (login). `email` es OPCIONAL y
+ * solo sirve para notificaciones — NO es el destino del código, que ya se envió
+ * al correo registrado en el paso anterior.
+ */
+@JsonClass(generateAdapter = true)
+data class ActivateRequest(
+    @Json(name = "customerId") val customerId: String,
+    @Json(name = "otpCode")    val otpCode: String,
+    @Json(name = "password")   val password: String,
+    @Json(name = "email")      val email: String? = null,
+)
+
 /** Usuario anidado en la respuesta de login — shape real del backend. */
 @JsonClass(generateAdapter = true)
 data class AuthUserDto(
