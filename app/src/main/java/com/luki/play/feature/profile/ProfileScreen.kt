@@ -56,7 +56,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,7 +83,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luki.play.data.auth.UserProfile
 import com.luki.play.feature.login.PasswordPolicy
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -158,12 +156,18 @@ fun ProfileScreen(
         ChangePasswordSheet(
             onDismiss = { showChangePwd = false },
             onSubmit = { current, next, onSuccess, onError ->
-                viewModel.changePassword(current, next, onSuccess, onError)
-            },
-            onChanged = {
-                // El backend ya revocó todas las sesiones: hay que salir.
-                showChangePwd = false
-                onLogout()
+                viewModel.changePassword(
+                    current, next,
+                    onSuccess = onSuccess,
+                    // El backend ya revocó todas las sesiones: hay que salir. Lo
+                    // dispara el ViewModel tras la ventana de éxito, así que se
+                    // cumple aunque la hoja se cierre antes.
+                    onForcedLogout = {
+                        showChangePwd = false
+                        onLogout()
+                    },
+                    onError = onError,
+                )
             },
         )
     }
@@ -615,10 +619,8 @@ private fun HairLine(color: Color, startInset: Dp = 0.dp) {
 private fun ChangePasswordSheet(
     onDismiss: () -> Unit,
     onSubmit: (current: String, next: String, onSuccess: () -> Unit, onError: (String) -> Unit) -> Unit,
-    onChanged: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
 
     var current by remember { mutableStateOf("") }
     var next by remember { mutableStateOf("") }
@@ -726,9 +728,11 @@ private fun ChangePasswordSheet(
                                     onSubmit(
                                         current, next,
                                         {
+                                            // El logout forzado (tras la ventana de
+                                            // éxito) lo maneja el ViewModel; aquí solo
+                                            // se muestra el estado "listo".
                                             loading = false
                                             done = true
-                                            scope.launch { delay(1800); onChanged() }
                                         },
                                         { msg -> loading = false; error = msg },
                                     )

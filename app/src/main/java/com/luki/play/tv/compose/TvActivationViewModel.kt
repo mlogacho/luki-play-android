@@ -54,8 +54,10 @@ class TvActivationViewModel @Inject constructor(
         while (coroutineContext.isActive) {
             val session = repository.createSession().getOrNull()
             if (session == null) {
-                // Sin red / backend caído: avisa y reintenta en unos segundos.
-                _state.update { it.copy(error = true) }
+                // Sin red / backend caído: avisa y reintenta en unos segundos. Se
+                // borra el código anterior (→ "------") para que la pantalla muestre
+                // "Conectando…" y no un código muerto con "Expira en 00:00".
+                _state.update { it.copy(error = true, code = "------", secsLeft = 0) }
                 delay(RETRY_MS)
                 continue
             }

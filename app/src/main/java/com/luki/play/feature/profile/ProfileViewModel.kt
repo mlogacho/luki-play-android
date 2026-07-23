@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -54,19 +55,29 @@ class ProfileViewModel @Inject constructor(
     }
 
     /**
-     * Cambia la contraseña. En éxito el backend ya cerró todas las sesiones,
-     * así que la pantalla debe hacer logout local después. Los errores se
-     * traducen con la misma regla del resto de auth.
+     * Cambia la contraseña. En éxito el backend ya cerró TODAS las sesiones
+     * (incluida esta), así que hay que forzar el cierre de sesión local después.
+     *
+     * Fiel al portal (`setTimeout(onSuccess, 1800)`): se muestra el éxito ~1,8 s
+     * y luego se fuerza el logout. El retardo y el `onForcedLogout` viven en
+     * [viewModelScope] —no en la corrutina de la hoja— para que el cierre de
+     * sesión ocurra SÍ O SÍ aunque el usuario descarte la hoja dentro de esa
+     * ventana; si no, la app se quedaría con un token que el servidor ya revocó.
      */
     fun changePassword(
         current: String,
         next: String,
         onSuccess: () -> Unit,
+        onForcedLogout: () -> Unit,
         onError: (String) -> Unit,
     ) {
         viewModelScope.launch {
             authRepository.changePassword(current, next)
-                .onSuccess { onSuccess() }
+                .onSuccess {
+                    onSuccess()
+                    delay(1800)
+                    onForcedLogout()
+                }
                 .onFailure { onError(AuthErrorMessage.of(it, "Error al cambiar la contraseña")) }
         }
     }

@@ -154,12 +154,19 @@ private fun rememberQrBitmap(content: String, sizePx: Int): ImageBitmap? = remem
         val matrix = QRCodeWriter().encode(
             content, BarcodeFormat.QR_CODE, sizePx, sizePx, mapOf(EncodeHintType.MARGIN to 1),
         )
-        val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.RGB_565)
-        for (x in 0 until sizePx) {
-            for (y in 0 until sizePx) {
-                bmp.setPixel(x, y, if (matrix[x, y]) AndroidColor.BLACK else AndroidColor.WHITE)
+        // Un único setPixels(IntArray) en vez de ~sizePx² llamadas setPixel(): en
+        // TV/head unit de gama baja esas decenas de miles de saltos JNI en el hilo
+        // de composición janqueaban el primer frame. index = y*ancho + x conserva
+        // el mapeo matrix[x, y] ↔ píxel (x, y), sin transponer.
+        val pixels = IntArray(sizePx * sizePx)
+        for (y in 0 until sizePx) {
+            val offset = y * sizePx
+            for (x in 0 until sizePx) {
+                pixels[offset + x] = if (matrix[x, y]) AndroidColor.BLACK else AndroidColor.WHITE
             }
         }
+        val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.RGB_565)
+        bmp.setPixels(pixels, 0, sizePx, 0, 0, sizePx, sizePx)
         bmp.asImageBitmap()
     }.getOrNull()
 }
