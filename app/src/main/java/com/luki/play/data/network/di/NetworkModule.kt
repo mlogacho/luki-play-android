@@ -4,6 +4,7 @@ package com.luki.play.data.network.di
 import com.luki.play.BuildConfig
 import com.luki.play.data.auth.SecureTokenStore
 import com.luki.play.data.auth.TokenStore
+import com.luki.play.data.auth.api.AccountApi
 import com.luki.play.data.auth.api.AuthApi
 import com.luki.play.data.network.AuthInterceptor
 import com.luki.play.data.network.TokenAuthenticator
@@ -101,6 +102,16 @@ object NetworkModule {
     @Singleton
     fun provideAuthApi(@PlainRetrofit retrofit: Retrofit): AuthApi =
         retrofit.create(AuthApi::class.java)
+
+    /**
+     * AccountApi (`/auth/me`, `/auth/change-password`) SÍ requiere Bearer, así
+     * que se crea sobre el cliente autenticado —a diferencia de [AuthApi], que
+     * es "plain" para login/refresh—.
+     */
+    @Provides
+    @Singleton
+    fun provideAccountApi(@AuthedRetrofit retrofit: Retrofit): AccountApi =
+        retrofit.create(AccountApi::class.java)
 
     private fun baseClientBuilder(logging: HttpLoggingInterceptor): OkHttpClient.Builder =
         OkHttpClient.Builder()

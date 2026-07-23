@@ -1,6 +1,7 @@
 // data/auth/AuthRepository.kt
 package com.luki.play.data.auth
 
+import com.luki.play.data.auth.api.AccountApi
 import com.luki.play.data.auth.api.AuthApi
 import com.luki.play.data.auth.api.ChangePasswordRequest
 import com.luki.play.data.auth.api.ContractLoginRequest
@@ -65,13 +66,14 @@ data class UserProfile(
 @Singleton
 class AuthRepository internal constructor(
     private val authApi: AuthApi,
+    private val accountApi: AccountApi,
     private val tokenStore: TokenStore,
     /** Inyectable para que los tests JVM controlen la concurrencia. */
     private val ioDispatcher: CoroutineDispatcher,
 ) {
 
-    @Inject constructor(authApi: AuthApi, tokenStore: TokenStore) :
-        this(authApi, tokenStore, Dispatchers.IO)
+    @Inject constructor(authApi: AuthApi, accountApi: AccountApi, tokenStore: TokenStore) :
+        this(authApi, accountApi, tokenStore, Dispatchers.IO)
 
     private val _session = MutableStateFlow(currentSnapshot())
 
@@ -132,7 +134,7 @@ class AuthRepository internal constructor(
      * interceptor de red; un 401 aquí se traduce arriba con [AuthErrorMessage].
      */
     suspend fun getProfile(): Result<UserProfile> = withContext(ioDispatcher) {
-        runCatching { authApi.me().toDomain() }
+        runCatching { accountApi.me().toDomain() }
             .onFailure { Timber.w(it, "AuthRepository: getProfile falló") }
     }
 
@@ -144,7 +146,7 @@ class AuthRepository internal constructor(
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> =
         withContext(ioDispatcher) {
             runCatching {
-                authApi.changePassword(ChangePasswordRequest(currentPassword, newPassword))
+                accountApi.changePassword(ChangePasswordRequest(currentPassword, newPassword))
                 Unit
             }.onFailure { Timber.w(it, "AuthRepository: changePassword falló") }
         }

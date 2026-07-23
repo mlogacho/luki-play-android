@@ -34,7 +34,7 @@ class AuthRepositoryTest {
             )
         )
         val store = FakeTokenStore()
-        val repo  = AuthRepository(api, store)
+        val repo  = AuthRepository(api, FakeAccountApi(), store)
 
         val result = repo.loginWithId("0102", "secret")
 
@@ -69,7 +69,7 @@ class AuthRepositoryTest {
             loginResponse = AuthResponseDto("a", null, AuthUserDto("u", "Nick", null, null))
         )
         val store = FakeTokenStore()
-        val repo  = AuthRepository(api, store)
+        val repo  = AuthRepository(api, FakeAccountApi(), store)
 
         repo.loginWithContract("C-99", "pwd").getOrThrow()
 
@@ -82,7 +82,7 @@ class AuthRepositoryTest {
     fun `login fallido devuelve Result failure sin tocar store`() = runTest {
         val api = FakeAuthApi(loginException = IOException("boom"))
         val store = FakeTokenStore()
-        val repo  = AuthRepository(api, store)
+        val repo  = AuthRepository(api, FakeAccountApi(), store)
 
         val result = repo.loginWithId("0102", "x")
 
@@ -101,7 +101,7 @@ class AuthRepositoryTest {
             initialUserId  = "u",
             initialDisplayName = "n",
         )
-        val repo = AuthRepository(api, store)
+        val repo = AuthRepository(api, FakeAccountApi(), store)
 
         val result = repo.logout()
 
@@ -164,11 +164,5 @@ private class FakeAuthApi(
         MessageResponseDto("Si la cédula existe, enviamos un código.")
 
     override suspend fun resetPasswordWithOtp(body: ResetPasswordOtpRequest) =
-        MessageResponseDto("Contraseña actualizada.")
-
-    override suspend fun me(): com.luki.play.data.auth.api.UserProfileDto =
-        error("FakeAuthApi: me no configurado")
-
-    override suspend fun changePassword(body: com.luki.play.data.auth.api.ChangePasswordRequest) =
         MessageResponseDto("Contraseña actualizada.")
 }

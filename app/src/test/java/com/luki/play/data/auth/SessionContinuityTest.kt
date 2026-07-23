@@ -29,7 +29,7 @@ import org.junit.Test
 class SessionContinuityTest {
 
     private fun repo(store: TokenStore) =
-        AuthRepository(NoopAuthApi(), store, Dispatchers.Unconfined)
+        AuthRepository(NoopAuthApi(), FakeAccountApi(), store, Dispatchers.Unconfined)
 
     @Test
     fun `una sesion replicada por el portal se reconoce como autenticada`() {
@@ -80,6 +80,4 @@ private class NoopAuthApi : AuthApi {
     override suspend fun logout() = error("no debe llamarse")
     override suspend fun requestPasswordOtp(body: RequestPasswordOtpRequest): MessageResponseDto = error("no debe llamarse")
     override suspend fun resetPasswordWithOtp(body: ResetPasswordOtpRequest): MessageResponseDto = error("no debe llamarse")
-    override suspend fun me(): com.luki.play.data.auth.api.UserProfileDto = error("no debe llamarse")
-    override suspend fun changePassword(body: com.luki.play.data.auth.api.ChangePasswordRequest): MessageResponseDto = error("no debe llamarse")
 }
