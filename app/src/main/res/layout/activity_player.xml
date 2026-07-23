@@ -29,9 +29,7 @@
         app:resize_mode="fit"
         app:surface_type="surface_view"
         app:show_timeout="3000"
-        app:show_next_button="false"
-        app:show_previous_button="false"
-        app:show_subtitle_button="false" />
+        app:controller_layout_id="@layout/luki_player_controls" />
 
     <!-- ── Loading indicator (centrado, visible mientras bufferiza) ───── -->
     <ProgressBar

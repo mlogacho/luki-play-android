@@ -19,7 +19,9 @@ import androidx.core.view.WindowCompat
 import com.luki.play.R
 import com.luki.play.data.streams.StreamSessionManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 import com.luki.play.databinding.ActivityPlayerBinding
 
@@ -59,6 +61,12 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
 
     /** Sesión de stream — solo se usa si la config dice que somos su dueño. */
     @Inject lateinit var streamSessionManager: StreamSessionManager
+
+    /** Catálogo (Room) — da el orden de zapping sin pasarlo por la navegación. */
+    @Inject lateinit var channelsRepository: com.luki.play.data.catalog.ChannelsRepository
+
+    /** Para resolver el stream del canal al que se zapea. */
+    @Inject lateinit var catalogApi: com.luki.play.data.catalog.api.CatalogApi
 
     /** true si abrimos sesión en este reproductor; decide si hay que cerrarla. */
     private var managingStreamSession = false
@@ -143,8 +151,8 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
 
         applyFullscreen()
         registerStopReceiver()
-        configureLiveControls()
         initPlayer()
+        setupControls()
         observeState()
         setupRetryButton()
     }
@@ -204,32 +212,130 @@ class PlayerActivity : AppCompatActivity(), LukiPlayerManager.PlayerCallback {
     }
 
     // ------------------------------------------------------------------ //
-    //  Live-stream controls — strip seekbar / ±15 / ±5 / speed gear
+    //  Controles del reproductor (luki_player_controls.xml)
     // ------------------------------------------------------------------ //
 
-    /**
-     * Luki Play sólo emite canales lineales en vivo, así que seekbar,
-     * fast-forward/rewind, time labels y el gear de ajustes (que incluye
-     * velocidad de reproducción) son irrelevantes y confunden al usuario.
-     * Los desactivamos aquí — next/prev/subtitles ya están en el XML.
-     */
-    private fun configureLiveControls() {
-        val pv = binding.playerView
-        pv.setShowFastForwardButton(false)
-        pv.setShowRewindButton(false)
-        pv.setShowNextButton(false)
-        pv.setShowPreviousButton(false)
-        pv.setShowSubtitleButton(false)
+    /** true cuando el video llena la pantalla (recorta) en vez de ajustarse. */
+    private var videoFilled = false
 
-        // Las vistas que no tienen API directa (seekbar, tiempo, gear de
-        // ajustes) se ocultan por id. Los ids viven en androidx.media3.ui.
-        intArrayOf(
-            androidx.media3.ui.R.id.exo_progress,
-            androidx.media3.ui.R.id.exo_position,
-            androidx.media3.ui.R.id.exo_duration,
-            androidx.media3.ui.R.id.exo_settings,
-        ).forEach { id ->
-            pv.findViewById<View>(id)?.visibility = View.GONE
+    /** Silencio actual; se restaura el volumen anterior al reactivar. */
+    private var muted = false
+
+    /**
+     * Cablea los botones propios del layout de controles. El play/pause lo
+     * maneja Media3 (id `exo_play_pause`); el resto son de la app:
+     *
+     *  · Volver → cierra el reproductor (antes solo salías con el gesto atrás).
+     *  · Silenciar y Ajustar/Llenar → como los del portal.
+     *  · Canal anterior/siguiente (zapping) → solo en el camino nativo, donde
+     *    hay un canal identificado; desde el bridge se ocultan (el portal lleva
+     *    su propio zapping en el WebView).
+     */
+    private fun setupControls() {
+        val pv = binding.playerView
+
+        pv.findViewById<android.widget.ImageButton>(R.id.btnPlayerBack)
+            ?.setOnClickListener { finish() }
+
+        pv.findViewById<android.widget.TextView>(R.id.tvPlayerTitle)?.text =
+            (viewModel.activeConfig() ?: readConfig(intent))?.title.orEmpty()
+
+        pv.findViewById<android.widget.ImageButton>(R.id.btnMute)
+            ?.setOnClickListener { toggleMute(it as android.widget.ImageButton) }
+
+        pv.findViewById<android.widget.ImageButton>(R.id.btnFit)
+            ?.setOnClickListener { toggleFit(it as android.widget.ImageButton) }
+
+        val canZap = activeStreamSessionChannelId() != null
+        val prev = pv.findViewById<android.widget.ImageButton>(R.id.btnPrevChannel)
+        val next = pv.findViewById<android.widget.ImageButton>(R.id.btnNextChannel)
+        prev?.visibility = if (canZap) View.VISIBLE else View.GONE
+        next?.visibility = if (canZap) View.VISIBLE else View.GONE
+        prev?.setOnClickListener { zap(-1) }
+        next?.setOnClickListener { zap(+1) }
+    }
+
+    private fun toggleMute(button: android.widget.ImageButton) {
+        muted = !muted
+        playerManager?.player?.volume = if (muted) 0f else 1f
+        button.setImageResource(
+            if (muted) R.drawable.ic_player_volume_off else R.drawable.ic_player_volume
+        )
+    }
+
+    private fun toggleFit(button: android.widget.ImageButton) {
+        videoFilled = !videoFilled
+        binding.playerView.resizeMode =
+            if (videoFilled) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+        button.setImageResource(
+            if (videoFilled) R.drawable.ic_player_fill else R.drawable.ic_player_fit
+        )
+    }
+
+    // ------------------------------------------------------------------ //
+    //  Zapping — saltar de canal siguiendo el orden del Home
+    // ------------------------------------------------------------------ //
+
+    /** Orden de zapping: mismo que ve el usuario en Home (categoría, luego canal). */
+    private var zapOrder: List<com.luki.play.data.catalog.domain.Channel>? = null
+    private var zapInFlight = false
+
+    /**
+     * Salta [delta] canales (−1 anterior, +1 siguiente) siguiendo el orden del
+     * Home. Resuelve el stream del vecino y recarga; la sesión de stream la
+     * reutiliza [StreamSessionManager.open] (upsert por dispositivo), así que
+     * zapear no consume cupos extra.
+     */
+    private fun zap(delta: Int) {
+        if (zapInFlight) return
+        val currentId = activeStreamSessionChannelId() ?: return
+        zapInFlight = true
+        lifecycleScope.launch {
+            try {
+                val order = zapOrder ?: buildZapOrder().also { zapOrder = it }
+                val index = order.indexOfFirst { it.id == currentId }
+                if (index < 0 || order.size < 2) return@launch
+                // Circular: del último salta al primero y viceversa.
+                val target = order[((index + delta) % order.size + order.size) % order.size]
+
+                val dto = catalogApi.getChannelStream(target.id)
+                val config = StreamConfig(
+                    url               = dto.streamUrl,
+                    title             = target.name,
+                    manifestType      = manifestTypeOf(dto.streamUrl),
+                    channelId         = target.id,
+                    ownsStreamSession = true,
+                )
+                binding.playerView.findViewById<android.widget.TextView>(R.id.tvPlayerTitle)
+                    ?.text = target.name
+                startPlayback(config, resetSavedPosition = true)
+            } catch (e: Exception) {
+                Timber.tag("PlayerActivity").w(e, "zapping falló")
+            } finally {
+                zapInFlight = false
+            }
+        }
+    }
+
+    /**
+     * Lista plana de canales en el MISMO orden del Home: agrupada por categoría,
+     * categorías ordenadas alfabéticamente. Así "siguiente" lleva al canal que
+     * el usuario esperaría tras el actual.
+     */
+    private suspend fun buildZapOrder(): List<com.luki.play.data.catalog.domain.Channel> =
+        channelsRepository.observeChannels().first()
+            .groupBy { it.category }
+            .toSortedMap()
+            .values
+            .flatten()
+
+    private fun manifestTypeOf(url: String): ManifestType {
+        val path = url.substringBefore('?').substringBefore('#').lowercase()
+        return when {
+            path.endsWith(".m3u8") -> ManifestType.HLS
+            path.endsWith(".mpd")  -> ManifestType.DASH
+            else                   -> ManifestType.OTHER
         }
     }
 

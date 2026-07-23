@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    luki_player_controls.xml — layout de controles de PlayerView
+    (referenciado con app:controller_layout_id).
+
+    Réplica de los controles del player del portal (player/[id].tsx):
+      · Arriba izq.  → Volver
+      · Centro       → canal anterior · play/pause · canal siguiente (zapping)
+      · Abajo der.   → Silenciar · Ajustar/Llenar
+
+    Media3 cablea por id los controles estándar que reconoce (exo_play_pause);
+    los ids propios (@+id/btn*) los maneja PlayerActivity. Los prev/next del
+    zapping NO reusan exo_prev/exo_next a propósito: esos navegan la playlist,
+    y aquí cada salto es un canal nuevo con su propio stream.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Scrim: oscurece el video para que los iconos blancos lean sobre
+         cualquier imagen. Media3 lo aparece/oculta con el resto. -->
+    <View
+        android:id="@id/exo_controls_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#66000000" />
+
+    <!-- ── Barra superior: volver + título del canal ─────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp">
+
+        <ImageButton
+            android:id="@+id/btnPlayerBack"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/player_icon_bg"
+            android:scaleType="fitCenter"
+            android:padding="9dp"
+            android:src="@drawable/ic_player_back"
+            android:contentDescription="Volver" />
+
+        <TextView
+            android:id="@+id/tvPlayerTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <!-- ── Centro: zapping + play/pause ──────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageButton
+            android:id="@+id/btnPrevChannel"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginEnd="24dp"
+            android:background="@drawable/player_icon_bg"
+            android:scaleType="fitCenter"
+            android:padding="14dp"
+            android:src="@drawable/ic_player_prev"
+            android:contentDescription="Canal anterior" />
+
+        <ImageView
+            android:id="@id/exo_play_pause"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:padding="8dp"
+            android:scaleType="fitCenter" />
+
+        <ImageButton
+            android:id="@+id/btnNextChannel"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="24dp"
+            android:background="@drawable/player_icon_bg"
+            android:scaleType="fitCenter"
+            android:padding="14dp"
+            android:src="@drawable/ic_player_next"
+            android:contentDescription="Canal siguiente" />
+    </LinearLayout>
+
+    <!-- ── Abajo derecha: silenciar + ajustar/llenar ─────────────────── -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="16dp">
+
+        <ImageButton
+            android:id="@+id/btnMute"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/player_icon_bg"
+            android:scaleType="fitCenter"
+            android:padding="10dp"
+            android:src="@drawable/ic_player_volume"
+            android:contentDescription="Silenciar" />
+
+        <ImageButton
+            android:id="@+id/btnFit"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/player_icon_bg"
+            android:scaleType="fitCenter"
+            android:padding="10dp"
+            android:src="@drawable/ic_player_fit"
+            android:contentDescription="Ajustar o llenar" />
+    </LinearLayout>
+
+</FrameLayout>
