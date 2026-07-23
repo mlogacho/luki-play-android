@@ -64,6 +64,12 @@ object Constants {
         const val VERIFY_ACTIVATION_CODE = "/auth/app/verify-activation-code"
         /** Crea la contraseña y devuelve tokens (login) */
         const val ACTIVATE = "/auth/app/activate"
+
+        // ── Emparejamiento de TV (device-code, sin auth) ──
+        /** La TV crea una sesión de emparejamiento y recibe código + QR */
+        const val TV_SESSION = "/auth/tv/session"
+        /** La TV sondea hasta que el teléfono activa la sesión */
+        const val TV_POLL = "/auth/tv/session/{sessionId}/poll"
     }
 
     // ── SharedPreferences keys ──────────────────────────────────────────────

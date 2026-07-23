@@ -129,6 +129,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.security.crypto)
     implementation(libs.timber)
+    // Generación del QR de activación de TV (pura Java, sin dependencias Android)
+    implementation(libs.zxing.core)
 
     // ── Firebase Crashlytics (telemetría) + Remote Config (feature flags) ────
     implementation(platform(libs.firebase.bom))

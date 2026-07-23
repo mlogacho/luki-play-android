@@ -29,6 +29,7 @@ composeCompiler      = "2.2.10"
 activityCompose      = "1.9.3"
 navigationCompose    = "2.8.4"
 coil                 = "2.7.0"
+zxing                = "3.5.3"
 paging               = "3.3.4"
 room                 = "2.7.1"
 hiltNavigation       = "1.2.0"
@@ -128,6 +129,7 @@ media3-cast                 = { group = "androidx.media3",             name = "m
 
 # ── Coil (imágenes) ──────────────────────────────────────────────────────────
 coil-compose                = { group = "io.coil-kt",                 name = "coil-compose",                      version.ref = "coil" }
+zxing-core                  = { group = "com.google.zxing",           name = "core",                              version.ref = "zxing" }
 
 # ── Paging ───────────────────────────────────────────────────────────────────
 paging-runtime              = { group = "androidx.paging",            name = "paging-runtime-ktx",                version.ref = "paging" }

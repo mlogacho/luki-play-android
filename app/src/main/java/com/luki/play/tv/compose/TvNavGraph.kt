@@ -10,17 +10,35 @@ import com.luki.play.feature.detail.ChannelDetailScreen
 import com.luki.play.player.StreamConfig
 
 object TvRoutes {
-    const val HOME   = "tv/home"
-    const val DETAIL = "tv/detail/{channelId}"
+    const val ACTIVATION = "tv/activation"
+    const val HOME       = "tv/home"
+    const val DETAIL     = "tv/detail/{channelId}"
     fun detail(channelId: String): String = "tv/detail/$channelId"
 }
 
+/**
+ * @param startAtHome true si ya hay sesión (la TV entra directo al catálogo);
+ *   false arranca en la activación por QR para conseguir una.
+ */
 @Composable
 fun TvNavGraph(
     onLaunchPlayer: (StreamConfig) -> Unit,
+    startAtHome: Boolean,
     navController: NavHostController = rememberNavController(),
 ) {
-    NavHost(navController = navController, startDestination = TvRoutes.HOME) {
+    NavHost(
+        navController = navController,
+        startDestination = if (startAtHome) TvRoutes.HOME else TvRoutes.ACTIVATION,
+    ) {
+        composable(TvRoutes.ACTIVATION) {
+            TvActivationScreen(
+                onAuthenticated = {
+                    navController.navigate(TvRoutes.HOME) {
+                        popUpTo(TvRoutes.ACTIVATION) { inclusive = true }
+                    }
+                },
+            )
+        }
         composable(TvRoutes.HOME) {
             TvHomeScreen(
                 onChannelClick = { ch -> navController.navigate(TvRoutes.detail(ch.id)) }

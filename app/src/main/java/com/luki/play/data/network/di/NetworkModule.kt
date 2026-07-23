@@ -6,6 +6,7 @@ import com.luki.play.data.auth.SecureTokenStore
 import com.luki.play.data.auth.TokenStore
 import com.luki.play.data.auth.api.AccountApi
 import com.luki.play.data.auth.api.AuthApi
+import com.luki.play.data.auth.api.TvAuthApi
 import com.luki.play.data.network.AuthInterceptor
 import com.luki.play.data.network.TokenAuthenticator
 import com.luki.play.util.Constants
@@ -112,6 +113,12 @@ object NetworkModule {
     @Singleton
     fun provideAccountApi(@AuthedRetrofit retrofit: Retrofit): AccountApi =
         retrofit.create(AccountApi::class.java)
+
+    /** Emparejamiento de TV: sin auth (la sesión aún no existe) → cliente plain. */
+    @Provides
+    @Singleton
+    fun provideTvAuthApi(@PlainRetrofit retrofit: Retrofit): TvAuthApi =
+        retrofit.create(TvAuthApi::class.java)
 
     private fun baseClientBuilder(logging: HttpLoggingInterceptor): OkHttpClient.Builder =
         OkHttpClient.Builder()
