@@ -9,6 +9,7 @@ import android.webkit.WebView
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.google.firebase.FirebaseApp
+import com.luki.play.data.config.FeatureFlags
 import com.luki.play.data.downloads.LukiDownloadService
 import com.luki.play.tv.recommendations.RecommendationsWorker
 import com.luki.play.util.CrashlyticsTree
@@ -21,6 +22,7 @@ import javax.inject.Inject
 class LukiApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var featureFlags: FeatureFlags
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -33,6 +35,9 @@ class LukiApplication : Application(), Configuration.Provider {
         initWebView()
         initDownloadNotificationChannel()
         scheduleTvRecommendations()
+        // Actualiza los flags en segundo plano; el valor nuevo aplica en el
+        // PRÓXIMO arranque. Este arranque usa el último valor cacheado.
+        featureFlags.refresh()
     }
 
     private fun scheduleTvRecommendations() {
