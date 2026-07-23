@@ -165,4 +165,10 @@ private class FakeAuthApi(
 
     override suspend fun resetPasswordWithOtp(body: ResetPasswordOtpRequest) =
         MessageResponseDto("Contraseña actualizada.")
+
+    override suspend fun me(): com.luki.play.data.auth.api.UserProfileDto =
+        error("FakeAuthApi: me no configurado")
+
+    override suspend fun changePassword(body: com.luki.play.data.auth.api.ChangePasswordRequest) =
+        MessageResponseDto("Contraseña actualizada.")
 }

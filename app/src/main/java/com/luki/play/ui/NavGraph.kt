@@ -28,6 +28,9 @@ import com.luki.play.feature.login.LoginScreen
 import com.luki.play.feature.login.RecoverPasswordScreen
 import com.luki.play.feature.login.SessionViewModel
 import com.luki.play.feature.parental.ParentalPinScreen
+import com.luki.play.feature.devices.DevicesScreen
+import com.luki.play.feature.profile.ProfileScreen
+import com.luki.play.feature.subscription.SubscriptionScreen
 import com.luki.play.feature.search.SearchScreen
 import com.luki.play.player.StreamConfig
 import androidx.media3.common.util.UnstableApi
@@ -39,8 +42,11 @@ object LukiRoutes {
     const val HOME      = "home"
     const val SEARCH    = "search"
     const val FAVORITES = "favorites"
-    const val DOWNLOADS = "downloads"
-    const val DETAIL    = "detail/{channelId}"
+    const val DOWNLOADS    = "downloads"
+    const val PROFILE      = "profile"
+    const val SUBSCRIPTION = "subscription"
+    const val DEVICES      = "devices"
+    const val DETAIL       = "detail/{channelId}"
     fun detail(channelId: String): String = "detail/$channelId"
 }
 
@@ -130,9 +136,27 @@ fun LukiNavGraph(
 
             composable(LukiRoutes.HOME) {
                 HomeScreen(
-                    onChannelClick = { ch -> navController.navigate(LukiRoutes.detail(ch.id)) },
-                    onLogout       = { sessionViewModel.logout() },
+                    onChannelClick      = { ch -> navController.navigate(LukiRoutes.detail(ch.id)) },
+                    onOpenProfile       = { navController.navigate(LukiRoutes.PROFILE) },
+                    onOpenSubscription  = { navController.navigate(LukiRoutes.SUBSCRIPTION) },
+                    onLogout            = { sessionViewModel.logout() },
                 )
+            }
+
+            composable(LukiRoutes.PROFILE) {
+                ProfileScreen(
+                    onBack        = { navController.popBackStack() },
+                    onLogout      = { sessionViewModel.logout() },
+                    onOpenDevices = { navController.navigate(LukiRoutes.DEVICES) },
+                )
+            }
+
+            composable(LukiRoutes.SUBSCRIPTION) {
+                SubscriptionScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(LukiRoutes.DEVICES) {
+                DevicesScreen(onBack = { navController.popBackStack() })
             }
 
             composable(LukiRoutes.SEARCH) {

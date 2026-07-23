@@ -201,4 +201,10 @@ private class RefreshingAuthApi(
     override suspend fun resetPasswordWithOtp(
         body: com.luki.play.data.auth.api.ResetPasswordOtpRequest,
     ) = error("not used")
+
+    override suspend fun me(): com.luki.play.data.auth.api.UserProfileDto = error("not used")
+
+    override suspend fun changePassword(
+        body: com.luki.play.data.auth.api.ChangePasswordRequest,
+    ) = error("not used")
 }

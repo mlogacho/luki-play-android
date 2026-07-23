@@ -3,6 +3,7 @@ package com.luki.play.data.auth.api
 
 import com.luki.play.util.Constants
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 /**
@@ -30,4 +31,12 @@ interface AuthApi {
 
     @POST(Constants.Auth.RESET_WITH_OTP)
     suspend fun resetPasswordWithOtp(@Body body: ResetPasswordOtpRequest): MessageResponseDto
+
+    /** Perfil del usuario autenticado. El Bearer lo pone [AuthInterceptor]. */
+    @GET(Constants.Auth.ME)
+    suspend fun me(): UserProfileDto
+
+    /** Cambia la contraseña; el backend revoca todas las sesiones al lograrlo. */
+    @POST(Constants.Auth.CHANGE_PASSWORD)
+    suspend fun changePassword(@Body body: ChangePasswordRequest): MessageResponseDto
 }

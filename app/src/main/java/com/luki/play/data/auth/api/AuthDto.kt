@@ -69,6 +69,40 @@ data class AuthUserDto(
     @Json(name = "plan")  val plan: String?,
 )
 
+/**
+ * Solicitud de cambio de contraseña (autenticado). El Bearer lo adjunta el
+ * [com.luki.play.data.network.AuthInterceptor]; el backend revoca todas las
+ * sesiones al tener éxito.
+ */
+@JsonClass(generateAdapter = true)
+data class ChangePasswordRequest(
+    @Json(name = "currentPassword") val currentPassword: String,
+    @Json(name = "newPassword")     val newPassword: String,
+)
+
+/**
+ * Perfil del usuario autenticado (`GET /auth/me`).
+ *
+ * Contrato verificado contra `UserProfileResponse` del portal
+ * (`services/api/authApi.ts`). Solo se declaran los campos que la pantalla de
+ * perfil usa; Moshi ignora las claves JSON extra. Todos son opcionales para
+ * que una respuesta parcial no reviente el parseo (lección de `StreamDto`).
+ */
+@JsonClass(generateAdapter = true)
+data class UserProfileDto(
+    @Json(name = "id")             val id: String? = null,
+    @Json(name = "firstName")      val firstName: String? = null,
+    @Json(name = "lastName")       val lastName: String? = null,
+    @Json(name = "idNumber")       val idNumber: String? = null,
+    @Json(name = "contractNumber") val contractNumber: String? = null,
+    @Json(name = "email")          val email: String? = null,
+    @Json(name = "serviceStatus")  val serviceStatus: String? = null,
+    // El portal restringe el acceso solo cuando el backend lo dice explícito;
+    // ante la duda (campo ausente) NO restringimos.
+    @Json(name = "canAccessOtt")   val canAccessOtt: Boolean = true,
+    @Json(name = "lastLoginAt")    val lastLoginAt: String? = null,
+)
+
 @JsonClass(generateAdapter = true)
 data class AuthResponseDto(
     @Json(name = "accessToken")  val accessToken: String,

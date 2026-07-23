@@ -155,6 +155,12 @@ private class FakeAuthApi(
 
     override suspend fun resetPasswordWithOtp(body: ResetPasswordOtpRequest) =
         MessageResponseDto("ok")
+
+    override suspend fun me(): com.luki.play.data.auth.api.UserProfileDto =
+        error("no usado en estos tests")
+
+    override suspend fun changePassword(body: com.luki.play.data.auth.api.ChangePasswordRequest) =
+        MessageResponseDto("ok")
 }
 
 private class FakeTokenStore : TokenStore {

@@ -2,10 +2,12 @@
 package com.luki.play.data.auth
 
 import com.luki.play.data.auth.api.AuthApi
+import com.luki.play.data.auth.api.ChangePasswordRequest
 import com.luki.play.data.auth.api.ContractLoginRequest
 import com.luki.play.data.auth.api.IdLoginRequest
 import com.luki.play.data.auth.api.RequestPasswordOtpRequest
 import com.luki.play.data.auth.api.ResetPasswordOtpRequest
+import com.luki.play.data.auth.api.UserProfileDto
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -32,6 +34,25 @@ data class AuthSession(
 sealed interface SessionState {
     data object Anonymous : SessionState
     data class Authenticated(val userId: String, val displayName: String) : SessionState
+}
+
+/**
+ * Perfil del usuario autenticado, ya mapeado a dominio (`GET /auth/me`).
+ * Réplica de los campos que consume la pantalla de perfil del portal.
+ */
+data class UserProfile(
+    val id: String,
+    val firstName: String,
+    val lastName: String,
+    val idNumber: String?,
+    val contractNumber: String?,
+    val email: String,
+    val serviceStatus: String?,
+    val canAccessOtt: Boolean,
+    val lastLoginAt: String?,
+) {
+    /** Nombre completo, o cadena vacía si el backend no lo trae. */
+    val fullName: String get() = "$firstName $lastName".trim()
 }
 
 /**
@@ -106,6 +127,28 @@ class AuthRepository internal constructor(
         }.onFailure { Timber.w(it, "AuthRepository: resetPasswordWithOtp falló") }
     }
 
+    /**
+     * Carga el perfil del usuario autenticado. El Bearer lo adjunta el
+     * interceptor de red; un 401 aquí se traduce arriba con [AuthErrorMessage].
+     */
+    suspend fun getProfile(): Result<UserProfile> = withContext(ioDispatcher) {
+        runCatching { authApi.me().toDomain() }
+            .onFailure { Timber.w(it, "AuthRepository: getProfile falló") }
+    }
+
+    /**
+     * Cambia la contraseña del usuario. En éxito el backend revoca TODAS las
+     * sesiones (incluida la actual), así que el llamador debe cerrar sesión
+     * localmente después — igual que el portal.
+     */
+    suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> =
+        withContext(ioDispatcher) {
+            runCatching {
+                authApi.changePassword(ChangePasswordRequest(currentPassword, newPassword))
+                Unit
+            }.onFailure { Timber.w(it, "AuthRepository: changePassword falló") }
+        }
+
     suspend fun logout(): Result<Unit> = withContext(ioDispatcher) {
         runCatching {
             // Best-effort: si el servidor no responde, igualmente limpiamos local.
@@ -140,6 +183,19 @@ class AuthRepository internal constructor(
                 session
             }.onFailure { Timber.w(it, "AuthRepository: login falló") }
         }
+
+    /** Mapea el DTO de `/auth/me` a dominio, con vacíos seguros. */
+    private fun UserProfileDto.toDomain(): UserProfile = UserProfile(
+        id             = id.orEmpty(),
+        firstName      = firstName.orEmpty(),
+        lastName       = lastName.orEmpty(),
+        idNumber       = idNumber,
+        contractNumber = contractNumber,
+        email          = email.orEmpty(),
+        serviceStatus  = serviceStatus,
+        canAccessOtt   = canAccessOtt,
+        lastLoginAt    = lastLoginAt,
+    )
 
     private fun currentSnapshot(): SessionState {
         val token = tokenStore.accessToken() ?: return SessionState.Anonymous

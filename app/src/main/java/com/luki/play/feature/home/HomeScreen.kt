@@ -38,9 +38,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Tv
@@ -109,6 +112,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onChannelClick: (Channel) -> Unit,
+    onOpenProfile: () -> Unit,
+    onOpenSubscription: () -> Unit,
     onLogout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -219,6 +224,14 @@ fun HomeScreen(
             ) {
                 AccountMenu(
                     user = user,
+                    onProfile = {
+                        menuOpen = false
+                        onOpenProfile()
+                    },
+                    onSubscription = {
+                        menuOpen = false
+                        onOpenSubscription()
+                    },
                     onLogout = {
                         menuOpen = false
                         confirmLogout = true
@@ -459,16 +472,18 @@ private fun AvatarButton(user: HomeUser, open: Boolean, onClick: () -> Unit) {
 // ─── Menú de cuenta ───────────────────────────────────────────────────────────
 
 /**
- * Panel que cuelga del avatar: tarjeta del usuario + cerrar sesión.
+ * Panel que cuelga del avatar: tarjeta del usuario + accesos + cerrar sesión.
  *
- * Divergencia consciente y acotada: el portal lista aquí "Mi Perfil",
- * "Mi Suscripción" y "Mis Dispositivos". Esas tres pantallas todavía no
- * existen en nativo, y una fila que no lleva a ningún sitio es peor que su
- * ausencia — se añaden cuando exista su destino.
+ * El portal lista aquí "Mi Perfil", "Mi Suscripción" y "Mis Dispositivos".
+ * Se van añadiendo a medida que existe su pantalla nativa (una fila que no
+ * lleva a ningún sitio es peor que su ausencia): hoy está "Mi Perfil";
+ * suscripción y dispositivos entran cuando aterricen en la Fase A.
  */
 @Composable
 private fun AccountMenu(
     user: HomeUser,
+    onProfile: () -> Unit,
+    onSubscription: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -532,6 +547,26 @@ private fun AccountMenu(
                 .background(HomePalette.MenuDivider)
         )
 
+        // Accesos del portal (su MENU_ITEMS): Mi Perfil + Mi Suscripción. "Mis
+        // Dispositivos" entra cuando exista su pantalla nativa.
+        MenuLinkRow(Icons.Filled.Person, Color(0xFF0A84FF), "Mi Perfil", onProfile)
+
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(HomePalette.MenuDivider)
+        )
+
+        MenuLinkRow(Icons.Filled.CreditCard, Color(0xFFFF9F0A), "Mi Suscripción", onSubscription)
+
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(HomePalette.MenuDivider)
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -561,6 +596,47 @@ private fun AccountMenu(
                 fontWeight = FontWeight.Bold,
             )
         }
+    }
+}
+
+/** Fila de acceso del menú de cuenta: icono cuadrado de color + etiqueta + chevron. */
+@Composable
+private fun MenuLinkRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconBg: Color,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(11.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(iconBg),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+        }
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = Icons.Filled.ChevronRight,
+            contentDescription = null,
+            tint = HomePalette.MenuEmail,
+            modifier = Modifier.size(16.dp),
+        )
     }
 }
 

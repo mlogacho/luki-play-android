@@ -25,6 +25,12 @@ object Constants {
     object Public {
         const val CHANNELS = "/public/canales"
         const val SLIDERS  = "/public/sliders"
+        /** Plan + suscripción del usuario. Pese al prefijo /public exige Bearer. */
+        const val ME_PLAN  = "/public/me/plan"
+        /** Dispositivos del usuario (exigen Bearer pese al prefijo /public). */
+        const val DEVICES            = "/public/devices"
+        const val DEVICES_REGISTER   = "/public/devices/register"
+        const val DEVICE_BY_FINGERPRINT = "/public/devices/{fingerprint}"
         fun channelStream(channelId: String) = "/public/canales/$channelId/stream"
         fun streamStart()     = "/public/streams/start"
         fun streamHeartbeat(sessionId: String) = "/public/streams/$sessionId/heartbeat"
@@ -46,6 +52,8 @@ object Constants {
         const val REQUEST_OTP    = "/auth/app/request-password-otp"
         /** Resetear contraseña con OTP */
         const val RESET_WITH_OTP = "/auth/app/reset-with-otp"
+        /** Cambiar contraseña (autenticado) — revoca todas las sesiones */
+        const val CHANGE_PASSWORD = "/auth/change-password"
     }
 
     // ── SharedPreferences keys ──────────────────────────────────────────────
