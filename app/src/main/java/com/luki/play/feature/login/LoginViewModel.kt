@@ -3,17 +3,14 @@ package com.luki.play.feature.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.luki.play.data.auth.AuthErrorMessage
 import com.luki.play.data.auth.AuthRepository
-import com.squareup.moshi.JsonClass
-import com.squareup.moshi.Moshi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
 import timber.log.Timber
-import java.io.IOException
 import javax.inject.Inject
 
 data class LoginUiState(
@@ -79,19 +76,9 @@ class LoginViewModel @Inject constructor(
 
     // ── Error mapping ────────────────────────────────────────────────────────
 
-    @JsonClass(generateAdapter = true)
-    internal data class ApiErrorDto(val message: String?)
-
-    private val errorAdapter = Moshi.Builder().build().adapter(ApiErrorDto::class.java)
-
     /** Mismos mensajes que la web: message del backend → fallback genérico. */
-    private fun Throwable.toUserMessage(): String = when (this) {
-        is HttpException -> runCatching {
-            response()?.errorBody()?.string()?.let { errorAdapter.fromJson(it)?.message }
-        }.getOrNull() ?: "Credenciales inválidas"
-        is IOException -> "Sin conexión. Verifica tu internet e intenta de nuevo."
-        else -> "Credenciales inválidas"
-    }
+    private fun Throwable.toUserMessage(): String =
+        AuthErrorMessage.of(this, fallback = "Credenciales inválidas")
 
     private companion object { const val TAG = "LoginVM" }
 }

@@ -3,6 +3,7 @@ package com.luki.play.feature.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.luki.play.data.auth.AuthErrorMessage
 import com.luki.play.data.auth.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,7 +68,7 @@ class RecoverPasswordViewModel @Inject constructor(
                     Timber.tag(TAG).w(t, "requestOtp falló")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = "No se pudo solicitar el código",
+                        errorMessage = AuthErrorMessage.of(t, fallback = "No se pudo solicitar el código"),
                     )
                 }
         }
@@ -97,7 +98,7 @@ class RecoverPasswordViewModel @Inject constructor(
                     Timber.tag(TAG).w(t, "resetPassword falló")
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        errorMessage = "No se pudo restablecer la contraseña",
+                        errorMessage = AuthErrorMessage.of(t, fallback = "No se pudo restablecer la contraseña"),
                     )
                 }
         }
