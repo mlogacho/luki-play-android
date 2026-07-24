@@ -99,6 +99,9 @@ class ProfileViewModelTest {
 private class ThrowingAccountApi(private val error: Throwable) : AccountApi {
     override suspend fun me(): UserProfileDto = throw error
     override suspend fun changePassword(body: ChangePasswordRequest): MessageResponseDto = throw error
+    override suspend fun completePrimerLogin(body: com.luki.play.data.auth.api.CompletePrimerLoginRequest) = throw error
+    override suspend fun sendEmailVerification(body: com.luki.play.data.auth.api.SendEmailVerificationRequest) = throw error
+    override suspend fun verifyEmail(body: com.luki.play.data.auth.api.VerifyEmailRequest) = throw error
 }
 
 private class NoopAuthApi : AuthApi {

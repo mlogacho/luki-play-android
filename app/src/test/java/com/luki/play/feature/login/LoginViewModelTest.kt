@@ -110,6 +110,18 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun `login con clave temporal expone requiresPrimerLogin`() = runTest(dispatcher) {
+        val resp = AuthResponseDto("a", "r", AuthUserDto("u", "Temp", null, "p"), isTempPassword = true)
+        val (vm, _) = vm(FakeAuthApi(loginResponse = resp))
+
+        vm.login("1720345678", "temporal")
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.loggedIn)
+        assertTrue(vm.uiState.value.requiresPrimerLogin)
+    }
+
+    @Test
     fun `fallo de red muestra el mensaje de sin conexion del front`() = runTest(dispatcher) {
         val (vm, _) = vm(FakeAuthApi(loginException = IOException("timeout")))
 

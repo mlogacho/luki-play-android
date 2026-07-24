@@ -75,6 +75,40 @@ class AuthResponseDtoTest {
     }
 
     @Test
+    fun `parsea las banderas de primer login del nivel superior`() {
+        // Shape real de id-number-login.use-case.ts:192-205: las banderas van
+        // junto a accessToken, NO dentro de user.
+        val json = """
+            {
+              "accessToken": "a",
+              "refreshToken": "r",
+              "mustChangePassword": true,
+              "primerLogin": true,
+              "isTempPassword": true,
+              "emailVerificado": false,
+              "user": {"id":"c1","name":"Nuevo","email":"","plan":"lukiplay"}
+            }
+        """.trimIndent()
+
+        val dto = adapter.fromJson(json)!!
+
+        assertEquals(true, dto.primerLogin)
+        assertEquals(true, dto.isTempPassword)
+        // El disparador del portal (login.tsx:105): isTempPassword || primerLogin.
+        assertEquals(true, dto.requiresPrimerLogin())
+    }
+
+    @Test
+    fun `sin banderas de primer login el flujo normal no las exige`() {
+        val json = """{"accessToken":"a","refreshToken":"r","user":{"id":"c1","name":"N","email":"","plan":"p"}}"""
+
+        val dto = adapter.fromJson(json)!!
+
+        // Ausentes → default false → no se exige primer login.
+        assertEquals(false, dto.requiresPrimerLogin())
+    }
+
+    @Test
     fun `user anidado tiene prioridad sobre alias planos`() {
         val json = """
             {"accessToken":"a","refreshToken":"r",

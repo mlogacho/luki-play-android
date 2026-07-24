@@ -5,7 +5,10 @@ import com.luki.play.data.auth.api.AccountApi
 import com.luki.play.data.auth.api.ActivateRequest
 import com.luki.play.data.auth.api.AuthApi
 import com.luki.play.data.auth.api.ChangePasswordRequest
+import com.luki.play.data.auth.api.CompletePrimerLoginRequest
 import com.luki.play.data.auth.api.ContractLoginRequest
+import com.luki.play.data.auth.api.SendEmailVerificationRequest
+import com.luki.play.data.auth.api.VerifyEmailRequest
 import com.luki.play.data.auth.api.FirstAccessRequest
 import com.luki.play.data.auth.api.IdLoginRequest
 import com.luki.play.data.auth.api.RequestActivationCodeRequest
@@ -31,6 +34,8 @@ data class AuthSession(
     val refreshToken: String?,
     val userId: String,
     val displayName: String,
+    /** El backend marcó clave temporal / primer login: hay que configurar la cuenta. */
+    val requiresPrimerLogin: Boolean = false,
 )
 
 /**
@@ -241,6 +246,48 @@ class AuthRepository internal constructor(
             }.onFailure { Timber.w(it, "AuthRepository: changePassword falló") }
         }
 
+    // ── Primer login (clave temporal → permanente) + verificación de correo ──
+
+    /**
+     * Completa el primer login: fija la contraseña permanente y, opcionalmente,
+     * registra un correo. Requiere el Bearer del login recién hecho (va por
+     * [accountApi]). Devuelve si falta verificar el correo. `email` va solo si no
+     * está en blanco (igual que el portal).
+     */
+    suspend fun completePrimerLogin(
+        newPassword: String,
+        confirmPassword: String,
+        email: String?,
+    ): Result<Boolean> = withContext(ioDispatcher) {
+        runCatching {
+            accountApi.completePrimerLogin(
+                CompletePrimerLoginRequest(
+                    newPassword = newPassword,
+                    confirmPassword = confirmPassword,
+                    email = email?.trim()?.takeIf { it.isNotBlank() },
+                )
+            ).requiresEmailVerification
+        }.onFailure { Timber.w(it, "AuthRepository: completePrimerLogin falló") }
+    }
+
+    /** Envía el OTP de verificación al correo (el indicado o el registrado). */
+    suspend fun sendEmailVerification(email: String?): Result<Unit> = withContext(ioDispatcher) {
+        runCatching {
+            accountApi.sendEmailVerification(
+                SendEmailVerificationRequest(email?.trim()?.takeIf { it.isNotBlank() })
+            )
+            Unit
+        }.onFailure { Timber.w(it, "AuthRepository: sendEmailVerification falló") }
+    }
+
+    /** Verifica el OTP de 6 dígitos recibido por correo. */
+    suspend fun verifyEmail(code: String): Result<Unit> = withContext(ioDispatcher) {
+        runCatching {
+            accountApi.verifyEmail(VerifyEmailRequest(code.trim()))
+            Unit
+        }.onFailure { Timber.w(it, "AuthRepository: verifyEmail falló") }
+    }
+
     suspend fun logout(): Result<Unit> = withContext(ioDispatcher) {
         runCatching {
             // Best-effort: si el servidor no responde, igualmente limpiamos local.
@@ -258,10 +305,11 @@ class AuthRepository internal constructor(
             runCatching {
                 val dto = block()
                 val session = AuthSession(
-                    accessToken  = dto.accessToken,
-                    refreshToken = dto.refreshToken,
-                    userId       = dto.resolvedUserId(),
-                    displayName  = dto.resolvedDisplayName(),
+                    accessToken         = dto.accessToken,
+                    refreshToken        = dto.refreshToken,
+                    userId              = dto.resolvedUserId(),
+                    displayName         = dto.resolvedDisplayName(),
+                    requiresPrimerLogin = dto.requiresPrimerLogin(),
                 )
                 tokenStore.save(
                     accessToken  = session.accessToken,

@@ -32,6 +32,7 @@ fun LoginScreen(
     onForgotPassword: () -> Unit,
     onActivateAccount: () -> Unit,
     onRequestAccess: () -> Unit,
+    onPrimerLogin: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -41,7 +42,9 @@ fun LoginScreen(
 
     LaunchedEffect(state.loggedIn) {
         if (state.loggedIn) {
-            onLoggedIn()
+            // Clave temporal / primer login → configurar la cuenta antes del Home
+            // (igual que el portal: login.tsx enruta a 'primer-login').
+            if (state.requiresPrimerLogin) onPrimerLogin() else onLoggedIn()
             viewModel.consumeLoggedIn()
         }
     }

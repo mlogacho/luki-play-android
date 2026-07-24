@@ -26,6 +26,7 @@ import com.luki.play.feature.downloads.DownloadsScreen
 import com.luki.play.feature.favorites.FavoritesScreen
 import com.luki.play.feature.home.HomeScreen
 import com.luki.play.feature.login.LoginScreen
+import com.luki.play.feature.login.PrimerLoginScreen
 import com.luki.play.feature.login.RecoverPasswordScreen
 import com.luki.play.feature.login.RegisterRequestScreen
 import com.luki.play.feature.login.SessionViewModel
@@ -43,6 +44,7 @@ object LukiRoutes {
     const val RECOVER   = "recover"
     const val ACTIVATE  = "activate"
     const val REGISTER_REQUEST = "register-request"
+    const val PRIMER_LOGIN     = "primer-login"
     const val HOME      = "home"
     const val SEARCH    = "search"
     const val FAVORITES = "favorites"
@@ -124,6 +126,22 @@ fun LukiNavGraph(
                     // tienen pantalla nativa: el grafo no vuelve al WebView.
                     onActivateAccount = { navController.navigate(LukiRoutes.ACTIVATE) },
                     onRequestAccess   = { navController.navigate(LukiRoutes.REGISTER_REQUEST) },
+                    // Clave temporal / primer login: configurar la cuenta antes del Home.
+                    onPrimerLogin     = {
+                        navController.navigate(LukiRoutes.PRIMER_LOGIN) {
+                            popUpTo(LukiRoutes.LOGIN) { inclusive = true }
+                        }
+                    },
+                )
+            }
+
+            composable(LukiRoutes.PRIMER_LOGIN) {
+                PrimerLoginScreen(
+                    onDone = {
+                        navController.navigate(LukiRoutes.HOME) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    },
                 )
             }
 

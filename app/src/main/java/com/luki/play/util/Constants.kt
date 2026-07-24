@@ -55,6 +55,14 @@ object Constants {
         /** Cambiar contraseña (autenticado) — revoca todas las sesiones */
         const val CHANGE_PASSWORD = "/auth/change-password"
 
+        // ── Primer login (clave temporal → permanente) + verificación de correo (autenticados) ──
+        /** Cambia la clave temporal del primer login; puede pedir verificar correo */
+        const val COMPLETE_PRIMER_LOGIN = "/auth/app/complete-primer-login"
+        /** Envía el OTP de verificación al correo indicado o al registrado */
+        const val SEND_EMAIL_VERIFICATION = "/auth/app/send-email-verification"
+        /** Verifica el OTP de 6 dígitos del correo */
+        const val VERIFY_EMAIL = "/auth/app/verify-email"
+
         // ── Activación de cuenta (sin auth) ──
         /** Verifica la cédula y devuelve el customerId */
         const val FIRST_ACCESS = "/auth/app/first-access"

@@ -177,6 +177,12 @@ data class AuthResponseDto(
     @Json(name = "refreshToken") val refreshToken: String?,
     /** Presente en login; ausente en refresh. */
     @Json(name = "user")         val user: AuthUserDto? = null,
+    // Banderas de primer login (nivel superior en id-login/contract-login). El
+    // portal enruta a "Configura tu cuenta" si isTempPassword || primerLogin.
+    @Json(name = "mustChangePassword") val mustChangePassword: Boolean = false,
+    @Json(name = "primerLogin")        val primerLogin: Boolean = false,
+    @Json(name = "isTempPassword")     val isTempPassword: Boolean = false,
+    @Json(name = "emailVerificado")    val emailVerificado: Boolean = false,
     // Alias planos legacy — tolerancia por si algún endpoint viejo los usa.
     @Json(name = "userId")       val userId: String? = null,
     @Json(name = "id")           val idAlt: String? = null,
@@ -185,4 +191,34 @@ data class AuthResponseDto(
 ) {
     fun resolvedUserId(): String = user?.id ?: userId ?: idAlt ?: ""
     fun resolvedDisplayName(): String = user?.name ?: nombre ?: nameAlt ?: ""
+
+    /** Requiere el flujo de primer login (misma condición que login.tsx:105). */
+    fun requiresPrimerLogin(): Boolean = isTempPassword || primerLogin
 }
+
+/** Cambia la clave temporal del primer login (`complete-primer-login`, autenticado). */
+@JsonClass(generateAdapter = true)
+data class CompletePrimerLoginRequest(
+    @Json(name = "newPassword")     val newPassword: String,
+    @Json(name = "confirmPassword") val confirmPassword: String,
+    @Json(name = "email")           val email: String? = null,
+)
+
+/** Respuesta de `complete-primer-login`: si falta verificar el correo. */
+@JsonClass(generateAdapter = true)
+data class PrimerLoginResultDto(
+    @Json(name = "message")                  val message: String? = null,
+    @Json(name = "requiresEmailVerification") val requiresEmailVerification: Boolean = false,
+)
+
+/** Envía el OTP de verificación de correo (`send-email-verification`, autenticado). */
+@JsonClass(generateAdapter = true)
+data class SendEmailVerificationRequest(
+    @Json(name = "email") val email: String? = null,
+)
+
+/** Verifica el OTP de 6 dígitos del correo (`verify-email`, autenticado). */
+@JsonClass(generateAdapter = true)
+data class VerifyEmailRequest(
+    @Json(name = "code") val code: String,
+)

@@ -23,4 +23,15 @@ interface AccountApi {
 
     @POST(Constants.Auth.CHANGE_PASSWORD)
     suspend fun changePassword(@Body body: ChangePasswordRequest): MessageResponseDto
+
+    // ── Primer login + verificación de correo (requieren el Bearer del login) ──
+
+    @POST(Constants.Auth.COMPLETE_PRIMER_LOGIN)
+    suspend fun completePrimerLogin(@Body body: CompletePrimerLoginRequest): PrimerLoginResultDto
+
+    @POST(Constants.Auth.SEND_EMAIL_VERIFICATION)
+    suspend fun sendEmailVerification(@Body body: SendEmailVerificationRequest): MessageResponseDto
+
+    @POST(Constants.Auth.VERIFY_EMAIL)
+    suspend fun verifyEmail(@Body body: VerifyEmailRequest): MessageResponseDto
 }

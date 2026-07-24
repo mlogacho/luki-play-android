@@ -17,6 +17,8 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val loggedIn: Boolean = false,
+    /** El backend pide configurar la cuenta (clave temporal / primer login). */
+    val requiresPrimerLogin: Boolean = false,
 )
 
 /**
@@ -56,8 +58,12 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             authRepository.loginWithId(cedula, password)
-                .onSuccess {
-                    _uiState.value = _uiState.value.copy(isLoading = false, loggedIn = true)
+                .onSuccess { session ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        loggedIn = true,
+                        requiresPrimerLogin = session.requiresPrimerLogin,
+                    )
                 }
                 .onFailure { t ->
                     Timber.tag(TAG).w(t, "login falló")
@@ -71,7 +77,7 @@ class LoginViewModel @Inject constructor(
 
     /** El NavGraph ya navegó; evita re-disparos al recomponer. */
     fun consumeLoggedIn() {
-        _uiState.value = _uiState.value.copy(loggedIn = false)
+        _uiState.value = _uiState.value.copy(loggedIn = false, requiresPrimerLogin = false)
     }
 
     // ── Error mapping ────────────────────────────────────────────────────────

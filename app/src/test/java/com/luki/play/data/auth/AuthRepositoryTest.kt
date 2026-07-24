@@ -13,6 +13,7 @@ import com.luki.play.data.auth.api.RequestPasswordOtpRequest
 import com.luki.play.data.auth.api.ResetPasswordOtpRequest
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -227,6 +228,54 @@ class AuthRepositoryTest {
         val result = repo.submitRegistrationRequest("Ana", "Ruiz", "1720345678", "0990000000", null, null)
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `login con clave temporal marca requiresPrimerLogin`() = runTest {
+        val api = FakeAuthApi(
+            loginResponse = AuthResponseDto(
+                accessToken = "a", refreshToken = "r",
+                user = AuthUserDto("u1", "Temp", null, "lukiplay"),
+                isTempPassword = true,
+            )
+        )
+        val repo = AuthRepository(api, FakeAccountApi(), FakeTokenStore())
+
+        val session = repo.loginWithId("1720345678", "temporal").getOrThrow()
+
+        assertTrue(session.requiresPrimerLogin)
+    }
+
+    @Test
+    fun `login normal no exige primer login`() = runTest {
+        val api = FakeAuthApi(
+            loginResponse = AuthResponseDto("a", "r", AuthUserDto("u1", "N", null, "p"))
+        )
+        val repo = AuthRepository(api, FakeAccountApi(), FakeTokenStore())
+
+        val session = repo.loginWithId("1720345678", "clave").getOrThrow()
+
+        assertFalse(session.requiresPrimerLogin)
+    }
+
+    @Test
+    fun `completePrimerLogin devuelve si falta verificar el correo`() = runTest {
+        val repo = AuthRepository(
+            FakeAuthApi(), FakeAccountApi(requiresEmailVerification = true), FakeTokenStore(),
+        )
+
+        val requiresEmail = repo.completePrimerLogin("NuevaClave123", "NuevaClave123", "ana@x.ec").getOrThrow()
+
+        assertTrue(requiresEmail)
+    }
+
+    @Test
+    fun `verifyEmail exitoso devuelve Result_success`() = runTest {
+        val repo = AuthRepository(FakeAuthApi(), FakeAccountApi(), FakeTokenStore())
+
+        val result = repo.verifyEmail("123456")
+
+        assertTrue(result.isSuccess)
     }
 }
 
