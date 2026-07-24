@@ -21,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import com.luki.play.data.auth.AuthRepository
 import com.luki.play.data.auth.SessionState
 import com.luki.play.feature.login.ActivateAccountScreen
+import com.luki.play.feature.login.ActivateTvScreen
 import com.luki.play.feature.detail.ChannelLaunchScreen
 import com.luki.play.feature.downloads.DownloadsScreen
 import com.luki.play.feature.favorites.FavoritesScreen
@@ -45,6 +46,7 @@ object LukiRoutes {
     const val ACTIVATE  = "activate"
     const val REGISTER_REQUEST = "register-request"
     const val PRIMER_LOGIN     = "primer-login"
+    const val ACTIVATE_TV      = "activate-tv"
     const val HOME      = "home"
     const val SEARCH    = "search"
     const val FAVORITES = "favorites"
@@ -132,6 +134,15 @@ fun LukiNavGraph(
                             popUpTo(LukiRoutes.LOGIN) { inclusive = true }
                         }
                     },
+                    onActivateTv      = { navController.navigate(LukiRoutes.ACTIVATE_TV) },
+                )
+            }
+
+            composable(LukiRoutes.ACTIVATE_TV) {
+                ActivateTvScreen(
+                    onBackToLogin = { navController.popBackStack(LukiRoutes.LOGIN, inclusive = false) },
+                    onActivateAccount = { navController.navigate(LukiRoutes.ACTIVATE) },
+                    onForgotPassword = { navController.navigate(LukiRoutes.RECOVER) },
                 )
             }
 

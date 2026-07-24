@@ -18,4 +18,8 @@ interface TvAuthApi {
 
     @GET(Constants.Auth.TV_POLL)
     suspend fun poll(@Path("sessionId") sessionId: String): TvPollDto
+
+    /** Lado teléfono: conecta el TV con el código que este muestra. */
+    @POST(Constants.Auth.TV_ACTIVATE)
+    suspend fun activateTv(@Body body: TvActivateRequest): TvActivateResultDto
 }

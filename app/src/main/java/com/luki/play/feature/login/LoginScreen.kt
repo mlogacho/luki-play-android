@@ -33,6 +33,7 @@ fun LoginScreen(
     onActivateAccount: () -> Unit,
     onRequestAccess: () -> Unit,
     onPrimerLogin: () -> Unit,
+    onActivateTv: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -99,6 +100,15 @@ fun LoginScreen(
             question = "¿No eres cliente Luki?",
             action = "Solicitar acceso",
             onClick = onRequestAccess,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+
+        // El portal llega a esto por la URL del QR del televisor; en la app se
+        // ofrece aquí para poder conectar un TV sin salir a un navegador.
+        AuthFooterAction(
+            question = "¿Tienes un TV con código?",
+            action = "Activar TV",
+            onClick = onActivateTv,
             modifier = Modifier.padding(top = 12.dp),
         )
     }

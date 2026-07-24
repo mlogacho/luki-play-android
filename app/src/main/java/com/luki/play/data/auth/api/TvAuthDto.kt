@@ -30,3 +30,25 @@ data class TvPollDto(
     @Json(name = "refreshToken") val refreshToken: String? = null,
     @Json(name = "user")         val user: AuthUserDto? = null,
 )
+
+/**
+ * Lado TELÉFONO del emparejamiento: conecta el TV con el código que muestra.
+ * Sin auth (el backend hace el login con estas credenciales usando el deviceId
+ * del TV). Shape de `TvActivateDto` del backend.
+ */
+@JsonClass(generateAdapter = true)
+data class TvActivateRequest(
+    @Json(name = "code")     val code: String,
+    @Json(name = "idNumber") val idNumber: String,
+    @Json(name = "password") val password: String,
+)
+
+/**
+ * `requiresActivation = true` ⇒ la cuenta aún tiene clave temporal: el backend
+ * NO conecta el TV y el usuario debe activar su cuenta primero.
+ */
+@JsonClass(generateAdapter = true)
+data class TvActivateResultDto(
+    @Json(name = "ok")                 val ok: Boolean = false,
+    @Json(name = "requiresActivation") val requiresActivation: Boolean = false,
+)

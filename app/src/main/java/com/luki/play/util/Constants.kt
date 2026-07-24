@@ -79,6 +79,9 @@ object Constants {
          */
         const val REGISTRATION_REQUEST = "/auth/app/registration-request"
 
+        /** Lado teléfono: conecta el TV con su código — body: { code, idNumber, password } */
+        const val TV_ACTIVATE = "/auth/tv/activate"
+
         // ── Emparejamiento de TV (device-code, sin auth) ──
         /** La TV crea una sesión de emparejamiento y recibe código + QR */
         const val TV_SESSION = "/auth/tv/session"

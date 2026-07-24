@@ -1,6 +1,7 @@
 // data/auth/TvAuthRepository.kt
 package com.luki.play.data.auth
 
+import com.luki.play.data.auth.api.TvActivateRequest
 import com.luki.play.data.auth.api.TvAuthApi
 import com.luki.play.data.auth.api.TvSessionRequest
 import kotlinx.coroutines.CoroutineDispatcher
@@ -84,8 +85,39 @@ class TvAuthRepository internal constructor(
         }.onFailure { Timber.w(it, "TvAuthRepository: poll falló") }
     }
 
+    /**
+     * Lado TELÉFONO: conecta el TV con el código que muestra. El backend hace el
+     * login con estas credenciales usando el deviceId del TV, así que aquí NO se
+     * persiste sesión alguna (la del teléfono no cambia).
+     */
+    suspend fun activateTv(
+        code: String,
+        idNumber: String,
+        password: String,
+    ): Result<TvActivateOutcome> = withContext(ioDispatcher) {
+        runCatching {
+            val dto = api.activateTv(
+                TvActivateRequest(
+                    code = code.trim().uppercase(),
+                    idNumber = idNumber.trim(),
+                    password = password,
+                )
+            )
+            if (dto.requiresActivation) TvActivateOutcome.NeedsAccountActivation
+            else TvActivateOutcome.Connected
+        }.onFailure { Timber.w(it, "TvAuthRepository: activateTv falló") }
+    }
+
     private companion object {
         const val DEFAULT_ACTIVATION_URL = "https://lukiplay.com/activar"
         const val DEFAULT_EXPIRY_SECONDS = 300
     }
+}
+
+/** Resultado de conectar un TV desde el teléfono. */
+sealed interface TvActivateOutcome {
+    /** TV conectado. */
+    data object Connected : TvActivateOutcome
+    /** La cuenta aún tiene clave temporal: primero hay que activarla. */
+    data object NeedsAccountActivation : TvActivateOutcome
 }
