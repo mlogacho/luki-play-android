@@ -179,6 +179,55 @@ class AuthRepositoryTest {
 
         assertNull(api.lastActivateRequest!!.email)
     }
+
+    @Test
+    fun `submitRegistrationRequest recorta campos y omite opcionales en blanco`() = runTest {
+        val api = FakeAuthApi()
+        val repo = AuthRepository(api, FakeAccountApi(), FakeTokenStore())
+
+        repo.submitRegistrationRequest(
+            nombres = "  Juan Carlos  ",
+            apellidos = "  Pérez López  ",
+            idNumber = "  1720345678  ",
+            telefono = "  0991234567  ",
+            email = "   ",
+            direccion = "   ",
+        ).getOrThrow()
+
+        val req = api.lastRegistrationRequest!!
+        assertEquals("Juan Carlos", req.nombres)
+        assertEquals("Pérez López", req.apellidos)
+        assertEquals("1720345678", req.idNumber)
+        assertEquals("0991234567", req.telefono)
+        // Opcionales en blanco → null (no cadena vacía), como el portal.
+        assertNull(req.email)
+        assertNull(req.direccion)
+    }
+
+    @Test
+    fun `submitRegistrationRequest pasa los opcionales recortados cuando vienen`() = runTest {
+        val api = FakeAuthApi()
+        val repo = AuthRepository(api, FakeAccountApi(), FakeTokenStore())
+
+        repo.submitRegistrationRequest(
+            nombres = "Ana", apellidos = "Ruiz", idNumber = "1720345678",
+            telefono = "0990000000", email = "  ana@x.ec ", direccion = " Quito ",
+        ).getOrThrow()
+
+        val req = api.lastRegistrationRequest!!
+        assertEquals("ana@x.ec", req.email)
+        assertEquals("Quito", req.direccion)
+    }
+
+    @Test
+    fun `submitRegistrationRequest propaga el fallo del backend como Result_failure`() = runTest {
+        val api = FakeAuthApi(registrationException = RuntimeException("409"))
+        val repo = AuthRepository(api, FakeAccountApi(), FakeTokenStore())
+
+        val result = repo.submitRegistrationRequest("Ana", "Ruiz", "1720345678", "0990000000", null, null)
+
+        assertTrue(result.isFailure)
+    }
 }
 
 /**
@@ -192,6 +241,7 @@ private class FakeAuthApi(
     private val firstAccessCustomerId: String? = null,
     private val activationCode: com.luki.play.data.auth.api.ActivationCodeDto? = null,
     private val activateResponse: AuthResponseDto? = null,
+    private val registrationException: Throwable? = null,
 ) : AuthApi {
 
     var idLoginCalls = 0
@@ -209,6 +259,8 @@ private class FakeAuthApi(
     var lastActivationCodeRequest: com.luki.play.data.auth.api.RequestActivationCodeRequest? = null
         private set
     var lastActivateRequest: com.luki.play.data.auth.api.ActivateRequest? = null
+        private set
+    var lastRegistrationRequest: com.luki.play.data.auth.api.RegistrationRequestBody? = null
         private set
 
     override suspend fun loginWithId(body: IdLoginRequest): AuthResponseDto {
@@ -255,5 +307,11 @@ private class FakeAuthApi(
     override suspend fun activate(body: com.luki.play.data.auth.api.ActivateRequest): AuthResponseDto {
         lastActivateRequest = body
         return activateResponse ?: error("FakeAuthApi: activateResponse no configurado")
+    }
+
+    override suspend fun submitRegistrationRequest(body: com.luki.play.data.auth.api.RegistrationRequestBody): MessageResponseDto {
+        lastRegistrationRequest = body
+        registrationException?.let { throw it }
+        return MessageResponseDto("Tu solicitud ha sido enviada. Te contactaremos pronto.")
     }
 }

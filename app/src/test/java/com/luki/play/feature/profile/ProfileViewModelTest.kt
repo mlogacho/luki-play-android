@@ -112,4 +112,5 @@ private class NoopAuthApi : AuthApi {
     override suspend fun requestActivationCode(body: com.luki.play.data.auth.api.RequestActivationCodeRequest) = error("no usado")
     override suspend fun verifyActivationCode(body: com.luki.play.data.auth.api.VerifyActivationCodeRequest) = error("no usado")
     override suspend fun activate(body: com.luki.play.data.auth.api.ActivateRequest) = error("no usado")
+    override suspend fun submitRegistrationRequest(body: com.luki.play.data.auth.api.RegistrationRequestBody) = error("no usado")
 }

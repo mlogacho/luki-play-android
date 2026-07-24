@@ -27,6 +27,7 @@ import com.luki.play.feature.favorites.FavoritesScreen
 import com.luki.play.feature.home.HomeScreen
 import com.luki.play.feature.login.LoginScreen
 import com.luki.play.feature.login.RecoverPasswordScreen
+import com.luki.play.feature.login.RegisterRequestScreen
 import com.luki.play.feature.login.SessionViewModel
 import com.luki.play.feature.parental.ParentalPinScreen
 import com.luki.play.feature.devices.DevicesScreen
@@ -41,6 +42,7 @@ object LukiRoutes {
     const val LOGIN     = "login"
     const val RECOVER   = "recover"
     const val ACTIVATE  = "activate"
+    const val REGISTER_REQUEST = "register-request"
     const val HOME      = "home"
     const val SEARCH    = "search"
     const val FAVORITES = "favorites"
@@ -73,8 +75,6 @@ object LukiRoutes {
 @Composable
 fun LukiNavGraph(
     onLaunchPlayer: (StreamConfig) -> Unit,
-    /** Abre el portal web — flujos que aún no tienen pantalla nativa. */
-    onOpenPortal: () -> Unit,
     authRepository: AuthRepository,
     navController: NavHostController = rememberNavController(),
 ) {
@@ -120,10 +120,16 @@ fun LukiNavGraph(
                         }
                     },
                     onForgotPassword = { navController.navigate(LukiRoutes.RECOVER) },
-                    // "Activa tu cuenta" ya tiene pantalla nativa. "Solicitar
-                    // acceso" (no-clientes) sigue en el portal: no es activación.
+                    // "Activa tu cuenta" y "Solicitar acceso" (no-clientes) ya
+                    // tienen pantalla nativa: el grafo no vuelve al WebView.
                     onActivateAccount = { navController.navigate(LukiRoutes.ACTIVATE) },
-                    onRequestAccess   = onOpenPortal,
+                    onRequestAccess   = { navController.navigate(LukiRoutes.REGISTER_REQUEST) },
+                )
+            }
+
+            composable(LukiRoutes.REGISTER_REQUEST) {
+                RegisterRequestScreen(
+                    onBackToLogin = { navController.popBackStack(LukiRoutes.LOGIN, inclusive = false) },
                 )
             }
 

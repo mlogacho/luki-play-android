@@ -113,6 +113,21 @@ data class ActivateRequest(
     @Json(name = "email")      val email: String? = null,
 )
 
+/**
+ * Solicitud de acceso de un no-cliente (`POST /auth/app/registration-request`).
+ * `email`/`direccion` son opcionales; el backend valida cédula/RUC y el formato
+ * del correo. Mismo shape que `SubmitRegistrationRequestDto` del backend.
+ */
+@JsonClass(generateAdapter = true)
+data class RegistrationRequestBody(
+    @Json(name = "nombres")   val nombres: String,
+    @Json(name = "apellidos") val apellidos: String,
+    @Json(name = "idNumber")  val idNumber: String,
+    @Json(name = "telefono")  val telefono: String,
+    @Json(name = "email")     val email: String? = null,
+    @Json(name = "direccion") val direccion: String? = null,
+)
+
 /** Usuario anidado en la respuesta de login — shape real del backend. */
 @JsonClass(generateAdapter = true)
 data class AuthUserDto(

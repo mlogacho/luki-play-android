@@ -191,6 +191,35 @@ class AuthRepository internal constructor(
     }
 
     /**
+     * Solicitud de acceso de un no-cliente (captación de lead, sin auth). El
+     * backend valida cédula/RUC y correo, y rechaza (409) si la cédula ya es
+     * cliente o ya tiene una solicitud pendiente; ese mensaje sube tal cual con
+     * [AuthErrorMessage]. `email`/`direccion` van solo si no están en blanco.
+     */
+    suspend fun submitRegistrationRequest(
+        nombres: String,
+        apellidos: String,
+        idNumber: String,
+        telefono: String,
+        email: String?,
+        direccion: String?,
+    ): Result<Unit> = withContext(ioDispatcher) {
+        runCatching {
+            authApi.submitRegistrationRequest(
+                com.luki.play.data.auth.api.RegistrationRequestBody(
+                    nombres   = nombres.trim(),
+                    apellidos = apellidos.trim(),
+                    idNumber  = idNumber.trim(),
+                    telefono  = telefono.trim(),
+                    email     = email?.trim()?.takeIf { it.isNotBlank() },
+                    direccion = direccion?.trim()?.takeIf { it.isNotBlank() },
+                )
+            )
+            Unit
+        }.onFailure { Timber.w(it, "AuthRepository: submitRegistrationRequest falló") }
+    }
+
+    /**
      * Carga el perfil del usuario autenticado. El Bearer lo adjunta el
      * interceptor de red; un 401 aquí se traduce arriba con [AuthErrorMessage].
      */

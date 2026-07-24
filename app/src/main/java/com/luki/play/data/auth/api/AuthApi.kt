@@ -44,4 +44,8 @@ interface AuthApi {
 
     @POST(Constants.Auth.ACTIVATE)
     suspend fun activate(@Body body: ActivateRequest): AuthResponseDto
+
+    /** Solicitud de acceso de un no-cliente (captación de lead, sin auth). */
+    @POST(Constants.Auth.REGISTRATION_REQUEST)
+    suspend fun submitRegistrationRequest(@Body body: RegistrationRequestBody): MessageResponseDto
 }

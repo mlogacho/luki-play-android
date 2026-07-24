@@ -84,4 +84,5 @@ private class NoopAuthApi : AuthApi {
     override suspend fun requestActivationCode(body: com.luki.play.data.auth.api.RequestActivationCodeRequest) = error("no debe llamarse")
     override suspend fun verifyActivationCode(body: com.luki.play.data.auth.api.VerifyActivationCodeRequest) = error("no debe llamarse")
     override suspend fun activate(body: com.luki.play.data.auth.api.ActivateRequest) = error("no debe llamarse")
+    override suspend fun submitRegistrationRequest(body: com.luki.play.data.auth.api.RegistrationRequestBody) = error("no debe llamarse")
 }

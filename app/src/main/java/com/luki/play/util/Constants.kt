@@ -65,6 +65,12 @@ object Constants {
         /** Crea la contraseña y devuelve tokens (login) */
         const val ACTIVATE = "/auth/app/activate"
 
+        /**
+         * Solicitud de acceso de un NO-cliente (captación de lead, sin auth).
+         * body: { nombres, apellidos, idNumber, telefono, email?, direccion? }
+         */
+        const val REGISTRATION_REQUEST = "/auth/app/registration-request"
+
         // ── Emparejamiento de TV (device-code, sin auth) ──
         /** La TV crea una sesión de emparejamiento y recibe código + QR */
         const val TV_SESSION = "/auth/tv/session"

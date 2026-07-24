@@ -206,4 +206,5 @@ private class RefreshingAuthApi(
     override suspend fun requestActivationCode(body: com.luki.play.data.auth.api.RequestActivationCodeRequest) = error("not used")
     override suspend fun verifyActivationCode(body: com.luki.play.data.auth.api.VerifyActivationCodeRequest) = error("not used")
     override suspend fun activate(body: com.luki.play.data.auth.api.ActivateRequest) = error("not used")
+    override suspend fun submitRegistrationRequest(body: com.luki.play.data.auth.api.RegistrationRequestBody) = error("not used")
 }
